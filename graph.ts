@@ -1,11 +1,11 @@
 class Graph {
 	private static instance: Graph;
 	private edges: Edge[];
-    private vertices: Vertex[]; // TODO: maybe we should convert it to map of id->vertexObj
+    private vertices: Map<number, Vertex>; // TODO: maybe we should convert it to map of id->vertexObj
 
 	private constructor() {
 		this.edges = [];
-        this.vertices = [];
+        this.vertices = new Map<number, Vertex>();
 	}
 
 	public static getInstance(): Graph {
@@ -16,28 +16,60 @@ class Graph {
     }
 
     private checkVertexExists(id: number): void {
-        let exists: boolean = false;
-        for (vertex of this.vertices) {
-            if (vertex.id === id) {
-                exists = true;
-                break;
-            }
-        }
-        if (!exists) {
+        if (!this.vertices.has(id)) {
             throw new Error(`Vertex with id ${id} does not exist`);
         }
     }
 
-    public addEdge(srcId: number, dstId: number, type: string) {
+    public addEdge(srcId: number, dstId: number, type: string): void {
         this.checkVertexExists(srcId);
         this.checkVertexExists(dstId);
 
-        edge: Edge = new Edge(srcId, dstId, type);
+        let edge: Edge = new Edge(srcId, dstId, type);
         this.edges.push(edge);
     }
 
-    public addVertex(vertexType: VertexType) {
-        // TODO
+    public addVertex(vertexType: VertexType, properties: Object): number {
+        let newVertex: Vertex;
+        switch (vertexType) {
+            case VertexType.Const:
+                newVertex = new ConstVertex(properties["value"]);
+                break;   
+            case VertexType.Variable:
+                newVertex = new VariableVertex(properties["name"]);
+                break;
+            case VertexType.BinaryOperation:
+                newVertex = new BinaryOperationVertex(properties["operation"]);
+                break;
+            default:
+                throw new Error(`Unknown vertex type`);
+        }
+        this.vertices.set(newVertex.id, newVertex);
+        return newVertex.id;
+    }
+
+    public printGraph(): void {
+        this.edges.forEach(edge => {console.log(`source: ${edge.srcId}, dest: ${edge.dstId}, type: ${edge.type}`)});
+        this.vertices.forEach(vertex => {console.log(`id: ${vertex.id}`)});
+    }
+
+    public printToFile(): void {
+        const fs = require('fs');
+
+        let content: string = "digraph G {\n";
+
+        this.vertices.forEach(vertex => { content += `\t${vertex.id} [ label="${vertex.getLabel()}" shape="rectangle" ];\n`});
+        this.edges.forEach(edge => { content += `\t${edge.srcId} -> ${edge.dstId} [ label="${edge.type}" ];\n`});
+
+    
+        content += "}\n";
+
+        fs.writeFile('graphData.txt', content, err => {
+            if (err) {
+                console.error(err);
+            }
+            // file written successfully
+        });
     }
 }
 
@@ -51,9 +83,9 @@ enum VertexType {
 
 
 class Edge {
-	private srcId: number;
-	private dstId: number;
-	private type: string;
+	public srcId: number;
+	public dstId: number;
+	public type: string;
 
 	public constructor(_srcId: number, _dstId: number, _type: string) {
 		this.srcId = _srcId;
@@ -73,6 +105,10 @@ class Vertex {
 
     public static getCount(): number {
         return Vertex.next_id;
+    }
+
+    public getLabel(): string {
+        return "";
     }
 }
 
@@ -98,15 +134,23 @@ class ConstVertex extends DataVertex {
         super();
         this.value = _value;
     }
+
+    public getLabel(): string {
+        return this.value as string;
+    }
 }
 
 
 class VariableVertex extends DataVertex {
     public name: string;
 
-    constructor(_value: string) {
+    constructor(_name: string) {
         super();
         this.name = _name;
+    }
+
+    public getLabel(): string {
+        return this.name;
     }
 }
 
@@ -126,12 +170,27 @@ class BinaryOperationVertex extends DataVertex {
         super();
         this.operation = _operation;
     }
+
+    public getLabel(): string {
+        switch(this.operation) {
+            case BinaryOperation.Add:
+                return "+";
+            case BinaryOperation.Div:
+                return "/";
+            case BinaryOperation.Mul:
+                return "*";
+            case BinaryOperation.Sub:
+                return "-";
+            default:
+                throw new Error(`Unknown vertex lable`);
+        }             
+    }
 }
 
 
 class SymbolTable {
     // mapping from symbols names to vertices IDs
-	private symbolTable: Map;
+	private symbolTable: Map<string, number>;
 
     public constructor() {
         this.symbolTable = new Map();
@@ -148,6 +207,21 @@ class SymbolTable {
         if (!this.symbolTable.has(name)) {
             throw new Error(`Symbol '${name}' does not exist in the symbol table`);
         }
-        return this.symbolTable.get(name);
+        return this.symbolTable.get(name) as number;
     }
 }
+
+
+function main(): void {
+
+    let graph: Graph = Graph.getInstance();
+    let id_1 = graph.addVertex(VertexType.Const, {value: 5});
+    let id_2 = graph.addVertex(VertexType.Variable, {name: "x"});
+
+    graph.addEdge(id_1, id_2, "test");
+    graph.printGraph();
+    graph.printToFile();   
+        
+}
+
+main();
