@@ -1,7 +1,7 @@
-class Graph {
+export class Graph {
 	private static instance: Graph;
 	private edges: Edge[];
-    private vertices: Map<number, Vertex>; // TODO: maybe we should convert it to map of id->vertexObj
+    private vertices: Map<number, Vertex>;
 
 	private constructor() {
 		this.edges = [];
@@ -25,8 +25,8 @@ class Graph {
         this.checkVertexExists(srcId);
         this.checkVertexExists(dstId);
 
-        let edge: Edge = new Edge(srcId, dstId, type);
-        this.edges.push(edge);
+        let newEdge: Edge = new Edge(srcId, dstId, type);
+        this.edges.push(newEdge);
     }
 
     public addVertex(vertexType: VertexType, properties: Object): number {
@@ -34,7 +34,7 @@ class Graph {
         switch (vertexType) {
             case VertexType.Const:
                 newVertex = new ConstVertex(properties["value"]);
-                break;   
+                break;
             case VertexType.Variable:
                 newVertex = new VariableVertex(properties["name"]);
                 break;
@@ -42,39 +42,40 @@ class Graph {
                 newVertex = new BinaryOperationVertex(properties["operation"]);
                 break;
             default:
-                throw new Error(`Unknown vertex type`);
+                throw new Error(`Undefined vertex type`);
         }
         this.vertices.set(newVertex.id, newVertex);
         return newVertex.id;
     }
 
-    public printGraph(): void {
-        this.edges.forEach(edge => {console.log(`source: ${edge.srcId}, dest: ${edge.dstId}, type: ${edge.type}`)});
-        this.vertices.forEach(vertex => {console.log(`id: ${vertex.id}`)});
-    }
-
-    public printToFile(): void {
-        const fs = require('fs');
-
-        let content: string = "digraph G {\n";
-
-        this.vertices.forEach(vertex => { content += `\t${vertex.id} [ label="${vertex.getLabel()}" shape="rectangle" ];\n`});
-        this.edges.forEach(edge => { content += `\t${edge.srcId} -> ${edge.dstId} [ label="${edge.type}" ];\n`});
-
-    
-        content += "}\n";
-
-        fs.writeFile('graphData.txt', content, err => {
-            if (err) {
-                console.error(err);
-            }
-            // file written successfully
-        });
+    public print(humanFormat = false, filename = null): void {
+		let content: string = "";
+		if (humanFormat) {
+			this.edges.forEach(edge => {content += `source: ${edge.srcId}, dest: ${edge.dstId}, type: ${edge.type}`});
+	        this.vertices.forEach(vertex => {content += `id: ${vertex.id}`});
+		}
+		else {
+			content = "digraph G {\n";
+			this.vertices.forEach(vertex => { content += `\t${vertex.id} [ label="${vertex.getLabel()}" shape="rectangle" ];\n`});
+	        this.edges.forEach(edge => { content += `\t${edge.srcId} -> ${edge.dstId} [ label="${edge.type}" ];\n`});
+			content += "}\n";
+		}
+		if (filename) {
+			const fs = require('fs');
+	        fs.writeFile(filename, content, err => {
+	            if (err) {
+	                console.error(err);
+	            }
+	        });
+		}
+		else {
+			console.log(content);
+		}
     }
 }
 
 
-enum VertexType {
+export enum VertexType {
     Const,
     Variable,
     BinaryOperation
@@ -95,7 +96,7 @@ class Edge {
 }
 
 
-class Vertex {
+abstract class Vertex {
     private static next_id: number = 0;
     public id: number;
 
@@ -107,20 +108,18 @@ class Vertex {
         return Vertex.next_id;
     }
 
-    public getLabel(): string {
-        return "";
-    }
+	abstract getLabel(): string;
 }
 
 
-class DataVertex extends Vertex {
+abstract class DataVertex extends Vertex {
     constructor() {
         super();
     }
 }
 
 
-class ControlVertex extends Vertex {
+abstract class ControlVertex extends Vertex {
     constructor() {
         super();
     }
@@ -163,7 +162,7 @@ enum BinaryOperation {
 }
 
 
-class BinaryOperationVertex extends DataVertex {
+export class BinaryOperationVertex extends DataVertex {
     public operation: BinaryOperation;
 
     constructor(_operation: BinaryOperation) {
@@ -182,8 +181,8 @@ class BinaryOperationVertex extends DataVertex {
             case BinaryOperation.Sub:
                 return "-";
             default:
-                throw new Error(`Unknown vertex lable`);
-        }             
+                throw new Error(`Undefined vertex lable`);
+        }
     }
 }
 
@@ -210,18 +209,3 @@ class SymbolTable {
         return this.symbolTable.get(name) as number;
     }
 }
-
-
-function main(): void {
-
-    let graph: Graph = Graph.getInstance();
-    let id_1 = graph.addVertex(VertexType.Const, {value: 5});
-    let id_2 = graph.addVertex(VertexType.Variable, {name: "x"});
-
-    graph.addEdge(id_1, id_2, "test");
-    graph.printGraph();
-    graph.printToFile();   
-        
-}
-
-main();
