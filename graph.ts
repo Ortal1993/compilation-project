@@ -56,8 +56,12 @@ export class Graph {
 		}
 		else {
 			content = "digraph G {\n";
-			this.vertices.forEach(vertex => { content += `\t${vertex.id} [ label="${vertex.getLabel()}" shape="rectangle" ];\n`});
-	        this.edges.forEach(edge => { content += `\t${edge.srcId} -> ${edge.dstId} [ label="${edge.type}" ];\n`});
+			this.vertices.forEach(vertex => {
+				content += `\t${vertex.id} [ label="${vertex.getLabel()}" shape="rectangle" ];\n`
+			});
+	        this.edges.forEach(edge => {
+				content += `\t${edge.srcId} -> ${edge.dstId} [ label="${edge.type}" ];\n`
+			});
 			content += "}\n";
 		}
 		if (filename) {
@@ -154,7 +158,7 @@ class VariableVertex extends DataVertex {
 }
 
 
-enum BinaryOperation {
+export enum BinaryOperation {
     Add,
     Sub,
     Mul,
