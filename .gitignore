@@ -1,7 +1,6 @@
 *.js
 *.json
 
-samples/
 build/
 output/
 
