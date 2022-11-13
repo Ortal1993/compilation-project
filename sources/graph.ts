@@ -4,11 +4,11 @@ import * as vertex from "./vertex";
 export class Graph {
 	private static instance: Graph;
 	private edges: Edge[];
-    private vertices: Map<number, vertex.Vertex>;
+	private vertices: Map<number, vertex.Vertex>;
 
 	private constructor() {
 		this.edges = [];
-        this.vertices = new Map<number, vertex.Vertex>();
+		this.vertices = new Map<number, vertex.Vertex>();
 	}
 
 	public static getInstance(): Graph {
@@ -58,7 +58,7 @@ export class Graph {
 		let content: string = "";
 		if (humanFormat) {
 			this.edges.forEach(edge => {content += `source: ${edge.srcId}, dest: ${edge.dstId}, type: ${edge.type}`});
-	        this.vertices.forEach(vertex => {content += `id: ${vertex.id}`});
+			this.vertices.forEach(vertex => {content += `id: ${vertex.id}`});
 		}
 		else {
 			content = "digraph G {\n";
@@ -72,11 +72,11 @@ export class Graph {
 		}
 		if (filename) {
 			const fs = require('fs');
-	        fs.writeFile(filename, content, err => {
-	            if (err) {
-	                console.error(err);
-	            }
-	        });
+			fs.writeFile(filename, content, err => {
+				if (err) {
+					console.error(err);
+				}
+			});
 		}
 		else {
 			console.log(content);
@@ -95,8 +95,3 @@ class Edge {
 		this.type = _type;
 	}
 }
-
-
-
-
-

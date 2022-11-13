@@ -2,7 +2,8 @@ export enum BinaryOperation {
     Add,
     Sub,
     Mul,
-    Div
+    Div,
+    Equal
 }
 
 export enum UnaryOperation {
