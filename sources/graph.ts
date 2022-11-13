@@ -2,21 +2,13 @@ import { VertexType, BinaryOperation, UnaryOperation } from "./types";
 import * as vertex from "./vertex";
 
 export class Graph {
-	private static instance: Graph;
 	private edges: Edge[];
 	private vertices: Map<number, vertex.Vertex>;
 
-	private constructor() {
+	public constructor() {
 		this.edges = [];
 		this.vertices = new Map<number, vertex.Vertex>();
 	}
-
-	public static getInstance(): Graph {
-        if (!Graph.instance) {
-            Graph.instance = new Graph();
-        }
-        return Graph.instance;
-    }
 
     private checkVertexExists(id: number): void {
         if (!this.vertices.has(id)) {

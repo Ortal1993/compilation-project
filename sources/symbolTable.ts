@@ -1,18 +1,9 @@
 export class SymbolTable {
-    private static instance: SymbolTable;
-
     // mapping from symbols names to vertices IDs
     private symbolTable: Map<string, number>;
 
-    private constructor() {
+    public constructor() {
         this.symbolTable = new Map<string, number>();
-    }
-
-    public static getInstance(): SymbolTable {
-        if (!SymbolTable.instance) {
-            SymbolTable.instance = new SymbolTable();
-        }
-        return SymbolTable.instance;
     }
 
     public add(name: string, id: number): void {

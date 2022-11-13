@@ -74,6 +74,24 @@ export class BinaryOperationVertex extends DataVertex {
                 return "*";
             case BinaryOperation.Sub:
                 return "-";
+            case BinaryOperation.Assign:
+                return "=";
+            case BinaryOperation.LessThan:
+                return "<";
+            case BinaryOperation.GreaterThan:
+                return ">";
+            case BinaryOperation.LessThanEqual:
+                return "<=";
+            case BinaryOperation.GreaterThanEqual:
+                return ">=";
+            case BinaryOperation.EqualEqual:
+                return "==";
+            case BinaryOperation.ExclamationEqual:
+                return "!=";
+            case BinaryOperation.EqualEqualEqual:
+                return "===";
+            case BinaryOperation.ExclamationEqualEqual:
+                return "!==";
             default:
                 throw new Error(`Undefined vertex label`);
         }

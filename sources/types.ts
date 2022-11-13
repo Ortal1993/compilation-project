@@ -3,7 +3,15 @@ export enum BinaryOperation {
     Sub,
     Mul,
     Div,
-    Equal
+    Assign,
+    LessThan,
+    GreaterThan,
+    LessThanEqual,
+    GreaterThanEqual,
+    EqualEqual,
+    ExclamationEqual,
+    EqualEqualEqual,
+    ExclamationEqualEqual
 }
 
 export enum UnaryOperation {
