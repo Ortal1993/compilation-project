@@ -10,43 +10,43 @@ export class Graph {
 		this.vertices = new Map<number, vertex.Vertex>();
 	}
 
-    private checkVertexExists(id: number): void {
-        if (!this.vertices.has(id)) {
-            throw new Error(`Vertex with id ${id} does not exist`);
-        }
-    }
+	private checkVertexExists(id: number): void {
+		if (!this.vertices.has(id)) {
+			throw new Error(`Vertex with id ${id} does not exist`);
+		}
+	}
 
-    public addEdge(srcId: number, dstId: number, type: string): void {
-        this.checkVertexExists(srcId);
-        this.checkVertexExists(dstId);
+	public addEdge(srcId: number, dstId: number, type: string): void {
+		this.checkVertexExists(srcId);
+		this.checkVertexExists(dstId);
 
-        let newEdge: Edge = new Edge(srcId, dstId, type);
-        this.edges.push(newEdge);
-    }
+		let newEdge: Edge = new Edge(srcId, dstId, type);
+		this.edges.push(newEdge);
+	}
 
-    public addVertex(vertexType: VertexType, properties: Object): number {
-        let newVertex: vertex.Vertex;
-        switch (vertexType) {
-            case VertexType.Const:
-                newVertex = new vertex.ConstVertex(properties["value"]);
-                break;
-            case VertexType.Variable:
-                newVertex = new vertex.VariableVertex(properties["name"]);
-                break;
-            case VertexType.BinaryOperation:
-                newVertex = new vertex.BinaryOperationVertex(properties["operation"]);
-                break;
-            case VertexType.UnaryOperation:
-                newVertex = new vertex.UnaryOperationVertex(properties["operation"]);
-                break;
-            default:
-                throw new Error(`Undefined vertex type`);
-        }
-        this.vertices.set(newVertex.id, newVertex);
-        return newVertex.id;
-    }
+	public addVertex(vertexType: VertexType, properties: Object): number {
+		let newVertex: vertex.Vertex;
+		switch (vertexType) {
+			case VertexType.Const:
+				newVertex = new vertex.ConstVertex(properties["value"]);
+				break;
+			case VertexType.Variable:
+				newVertex = new vertex.VariableVertex(properties["name"]);
+				break;
+			case VertexType.BinaryOperation:
+				newVertex = new vertex.BinaryOperationVertex(properties["operation"]);
+				break;
+			case VertexType.UnaryOperation:
+				newVertex = new vertex.UnaryOperationVertex(properties["operation"]);
+				break;
+			default:
+				throw new Error(`Undefined vertex type`);
+		}
+		this.vertices.set(newVertex.id, newVertex);
+		return newVertex.id;
+	}
 
-    public print(humanFormat: boolean = false, filename: string | null = null): void {
+	public print(humanFormat: boolean = false, filename: string | null = null): void {
 		let content: string = "";
 		if (humanFormat) {
 			this.edges.forEach(edge => {content += `source: ${edge.srcId}, dest: ${edge.dstId}, type: ${edge.type}`});
@@ -57,7 +57,7 @@ export class Graph {
 			this.vertices.forEach(vertex => {
 				content += `\t${vertex.id} [ label="${vertex.getLabel()}" shape="rectangle" ];\n`
 			});
-	        this.edges.forEach(edge => {
+			this.edges.forEach(edge => {
 				content += `\t${edge.srcId} -> ${edge.dstId} [ label="${edge.type}" ];\n`
 			});
 			content += "}\n";
@@ -73,7 +73,7 @@ export class Graph {
 		else {
 			console.log(content);
 		}
-    }
+	}
 }
 
 class Edge {
