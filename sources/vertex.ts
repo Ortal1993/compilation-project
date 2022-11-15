@@ -12,7 +12,7 @@ export abstract class Vertex {
         return Vertex.next_id;
     }
 
-	abstract getLabel(): string;
+    abstract getLabel(): string;
 }
 
 

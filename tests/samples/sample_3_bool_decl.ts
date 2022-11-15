@@ -1,0 +1,10 @@
+let x: boolean = true;
+let y: boolean = false;
+let z: boolean = 4 < 5;
+let w: boolean = 4 <= 5;
+let a: boolean = 4 > 5;
+let b: boolean = 4 >= 5;
+let c: boolean = 4 == 5;
+let d: boolean = 4 != 5;
+let e: boolean = 4 === 5;
+let f: boolean = 4 !== 5;

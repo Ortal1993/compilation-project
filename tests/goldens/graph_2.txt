@@ -1,0 +1,31 @@
+digraph G {
+	0 [ label="a" shape="rectangle" ];
+	1 [ label="10" shape="rectangle" ];
+	2 [ label="b" shape="rectangle" ];
+	3 [ label="10" shape="rectangle" ];
+	4 [ label="+" shape="rectangle" ];
+	5 [ label="c" shape="rectangle" ];
+	6 [ label="12" shape="rectangle" ];
+	7 [ label="-" shape="rectangle" ];
+	8 [ label="*" shape="rectangle" ];
+	9 [ label="*" shape="rectangle" ];
+	10 [ label="f" shape="rectangle" ];
+	11 [ label="15" shape="rectangle" ];
+	12 [ label="g" shape="rectangle" ];
+	13 [ label="h" shape="rectangle" ];
+	1 -> 0 [ label="assign" ];
+	3 -> 4 [ label="right" ];
+	0 -> 4 [ label="left" ];
+	4 -> 2 [ label="assign" ];
+	6 -> 7 [ label="right" ];
+	2 -> 7 [ label="left" ];
+	0 -> 8 [ label="right" ];
+	7 -> 8 [ label="left" ];
+	8 -> 5 [ label="assign" ];
+	5 -> 9 [ label="right" ];
+	2 -> 9 [ label="left" ];
+	9 -> 0 [ label="assign" ];
+	11 -> 10 [ label="assign" ];
+	10 -> 12 [ label="assign" ];
+	12 -> 13 [ label="assign" ];
+}

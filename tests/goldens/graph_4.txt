@@ -1,0 +1,5 @@
+digraph G {
+	0 [ label="str" shape="rectangle" ];
+	1 [ label="Hello World" shape="rectangle" ];
+	1 -> 0 [ label="assign" ];
+}
