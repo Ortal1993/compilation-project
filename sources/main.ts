@@ -87,7 +87,7 @@ class Analyzer {
 			this.graph.addEdge(expNodeId, varNodeId, "assign");
 		}
 
-		this.symbolTable.add(varName, varNodeId);
+		this.symbolTable.set(varName, varNodeId);
 	}
 
 	private processExpression(expression: ts.Expression): number {
@@ -160,9 +160,6 @@ class Analyzer {
 	}
 
 	private processBinaryExpression(binExpression: ts.BinaryExpression): number {
-		let leftNodeId: number = this.processExpression(binExpression.left);
-		let rightNodeId: number = this.processExpression(binExpression.right);
-
 		let binaryOperation: BinaryOperation;
 		let isAssignOperation: boolean = false;
 
@@ -210,11 +207,16 @@ class Analyzer {
 			default:
 				throw new Error(`not implemented`);
 		}
+
+		let rightNodeId: number = this.processExpression(binExpression.right);
 		if (isAssignOperation) {
+			console.log("isAssignOperation")
+			let leftNodeId: number = this.processIdentifierExpression(binExpression.left as ts.Identifier, true);
 			this.graph.addEdge(rightNodeId, leftNodeId, "assign");
 			return leftNodeId;
 		}
 		else {
+			let leftNodeId: number = this.processExpression(binExpression.left);
 			let operationNodeId: number = this.graph.addVertex(VertexType.BinaryOperation, {operation: binaryOperation});
 			this.graph.addEdge(rightNodeId, operationNodeId, "right");
 			this.graph.addEdge(leftNodeId, operationNodeId, "left");
@@ -226,8 +228,16 @@ class Analyzer {
 		return this.processExpression(parenthesizedExpression.expression);
 	}
 
-	private processIdentifierExpression(identifierExpression: ts.Identifier): number {
+	private processIdentifierExpression(identifierExpression: ts.Identifier, createNewNode: boolean = false): number {
+		console.log("processIdentifierExpression")
 		let varName: string = (identifierExpression as any).escapedText;
+		this.symbolTable.checkExists(varName);
+
+		if (createNewNode) {
+			let newNodeId: number = this.graph.addVertex(VertexType.Variable, {name: varName});
+			this.symbolTable.set(varName, newNodeId);
+			return newNodeId;
+		}
 		return this.symbolTable.getIdByName(varName);
 	}
 }

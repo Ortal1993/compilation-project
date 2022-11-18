@@ -6,10 +6,13 @@ export class SymbolTable {
         this.symbolTable = new Map<string, number>();
     }
 
-    public add(name: string, id: number): void {
-        if (this.symbolTable.has(name)) {
-            throw new Error(`Symbol '${name}' already exists in the symbol table`);
+    public checkExists(name: string): void {
+        if (!this.symbolTable.has(name)) {
+            throw new Error(`Symbol '${name}' does not exist in the symbol table`);
         }
+    }
+
+    public set(name: string, id: number): void {
         this.symbolTable.set(name, id);
     }
 
