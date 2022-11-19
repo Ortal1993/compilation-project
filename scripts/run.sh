@@ -102,23 +102,6 @@ then
         exit 1
     fi
 else
-    if [ -d "$build_dir" ]
-    then
-        if [ $verbosity = true ]
-        then
-            echo "INFO: Removing build directory"
-            echo ">> rm -rf $build_dir"
-        fi
-
-        rm -rf $build_dir
-
-        if [ $? -ne 0 ]
-        then
-            echo "ERROR: Failed to remove existing build directory"
-            exit 1
-        fi
-    fi
-
     # Run tsc command
 
     if [ $verbosity = true ]
