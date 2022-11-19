@@ -36,6 +36,9 @@ class Analyzer {
 				case ts.SyntaxKind.ExpressionStatement:
 					this.processExpressionStatement(statement as ts.ExpressionStatement);
 					break;
+				case ts.SyntaxKind.IfStatement:
+					this.processIfStatement(statement as ts.IfStatement);
+					break;
 				default:
 					throw new Error(`not implemented`);
 			}
@@ -54,16 +57,95 @@ class Analyzer {
 		});
 	}
 
-	private processExpressionStatement(expStatement: ts.ExpressionStatement) {
-		expStatement.forEachChild(child => {
-			switch (child.kind) {
-				case ts.SyntaxKind.BinaryExpression:
-					this.processBinaryExpression(child as ts.BinaryExpression);
+	private processExpressionStatement(expStatement: ts.ExpressionStatement): number {
+		return this.processBinaryExpression(expStatement.expression as ts.BinaryExpression);
+	}
+
+	private processIfStatement(ifStatement: ts.IfStatement) {
+		let expNodeId: number = this.processExpression(ifStatement.expression);
+		let ifNodeId: number = this.graph.addVertex(VertexType.If);
+		this.graph.addEdge(expNodeId, ifNodeId, "cond");
+
+		let symbolTableCopy: Map<string, number> = this.symbolTable.getCopy();
+
+		let changedVars: Set<string>;
+		let trueBranchSymbolTable: Map<string, number>;
+		let falseBranchSymbolTable: Map<string, number>;
+
+		changedVars = this.processIfBlock(ifStatement.thenStatement);
+		trueBranchSymbolTable = this.symbolTable.getCopy(changedVars);
+
+		if (ifStatement.elseStatement === undefined) {
+			falseBranchSymbolTable = new Map<string, number>();
+		}
+		else {
+			changedVars = this.processIfBlock(ifStatement.elseStatement);
+			falseBranchSymbolTable = this.symbolTable.getCopy(changedVars);
+		}
+
+		// create phi vertex using all the 3 maps
+		this.createPhiVertices(symbolTableCopy, trueBranchSymbolTable, falseBranchSymbolTable, ifNodeId);
+	}
+
+	private createPhiVertices(symbolTableCopy: Map<string, number>,
+							  trueBranchSymbolTable: Map<string, number>,
+							  falseBranchSymbolTable: Map<string, number>,
+							  ifNodeId: number): void {
+		symbolTableCopy.forEach((nodeId: number, varName: string) => {
+			let trueBranchNodeId = trueBranchSymbolTable.get(varName);
+			let falseBranchNodeId = falseBranchSymbolTable.get(varName);
+
+			if (!(trueBranchNodeId) && !(falseBranchNodeId)) {
+				// TODO: assert (remove after testing)
+				if (nodeId !== this.symbolTable.getIdByName(varName)) {
+					throw new Error(`unexpected node id ${nodeId} in symbol table`);
+				}
+			}
+			else {
+				let phiNodeId: number = this.graph.addVertex(VertexType.Phi, {name: varName, ifId: ifNodeId});
+				if (trueBranchNodeId && falseBranchNodeId) {
+					this.graph.addEdge(trueBranchNodeId, phiNodeId, "true-assign");
+					this.graph.addEdge(falseBranchNodeId, phiNodeId, "false-assign");
+				}
+				else if (trueBranchNodeId) {
+					this.graph.addEdge(trueBranchNodeId, phiNodeId, "true-assign");
+					this.graph.addEdge(nodeId, phiNodeId, "false-assign");
+				}
+				else if (falseBranchNodeId) {
+					this.graph.addEdge(falseBranchNodeId, phiNodeId, "false-assign");
+					this.graph.addEdge(nodeId, phiNodeId, "true-assign");
+				}
+				else {
+					// TODO: assert (remove after testing)
+					throw new Error(`logical error`);
+				}
+				this.symbolTable.set(varName, phiNodeId)
+			}
+		});
+	}
+
+	private processIfBlock(statements: ts.Statement) {
+		let changedVars: Set<string> = new Set<string>();
+
+		statements.forEachChild(statement => {
+			switch (statement.kind) {
+				case ts.SyntaxKind.VariableStatement:
+					this.processVariableStatement(statement as ts.VariableStatement);
+					break;
+				case ts.SyntaxKind.ExpressionStatement:
+					let varNodeId: number = this.processExpressionStatement(statement as ts.ExpressionStatement);
+					changedVars.add(this.symbolTable.getNameById(varNodeId));
+					break;
+				case ts.SyntaxKind.IfStatement:
+					// TODO: add support for recursive if statements
+					this.processIfStatement(statement as ts.IfStatement);
 					break;
 				default:
 					throw new Error(`not implemented`);
 			}
 		});
+
+		return changedVars;
 	}
 
 	private processVariableDeclarationList(varDeclList: ts.VariableDeclarationList): void {
@@ -210,7 +292,6 @@ class Analyzer {
 
 		let rightNodeId: number = this.processExpression(binExpression.right);
 		if (isAssignOperation) {
-			console.log("isAssignOperation")
 			let leftNodeId: number = this.processIdentifierExpression(binExpression.left as ts.Identifier, true);
 			this.graph.addEdge(rightNodeId, leftNodeId, "assign");
 			return leftNodeId;
@@ -229,7 +310,6 @@ class Analyzer {
 	}
 
 	private processIdentifierExpression(identifierExpression: ts.Identifier, createNewNode: boolean = false): number {
-		console.log("processIdentifierExpression")
 		let varName: string = (identifierExpression as any).escapedText;
 		this.symbolTable.checkExists(varName);
 

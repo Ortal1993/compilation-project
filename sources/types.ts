@@ -23,6 +23,7 @@ export enum VertexType {
     Const,
     Variable,
     BinaryOperation,
-    UnaryOperation
-    // TODO: add also control vertices types
+    UnaryOperation,
+    If,
+    Phi
 }

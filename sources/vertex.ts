@@ -13,8 +13,11 @@ export abstract class Vertex {
     }
 
     abstract getLabel(): string;
-}
 
+    public getLabelPrefix(): string {
+        return String(this.id) + " | ";
+    }
+}
 
 abstract class DataVertex extends Vertex {
     constructor() {
@@ -22,13 +25,11 @@ abstract class DataVertex extends Vertex {
     }
 }
 
-
 abstract class ControlVertex extends Vertex {
     constructor() {
         super();
     }
 }
-
 
 export class ConstVertex extends DataVertex {
     public value: unknown;
@@ -39,7 +40,7 @@ export class ConstVertex extends DataVertex {
     }
 
     public getLabel(): string {
-        return this.value as string;
+        return this.getLabelPrefix() + (this.value as string);
     }
 }
 
@@ -52,7 +53,7 @@ export class VariableVertex extends DataVertex {
     }
 
     public getLabel(): string {
-        return this.name;
+        return this.getLabelPrefix() + this.name;
     }
 }
 
@@ -65,36 +66,53 @@ export class BinaryOperationVertex extends DataVertex {
     }
 
     public getLabel(): string {
+        let operation: string;
+
         switch(this.operation) {
             case BinaryOperation.Add:
-                return "+";
+                operation = "+";
+                break;
             case BinaryOperation.Div:
-                return "/";
+                operation = "/";
+                break;
             case BinaryOperation.Mul:
-                return "*";
+                operation = "*";
+                break;
             case BinaryOperation.Sub:
-                return "-";
+                operation = "-";
+                break;
             case BinaryOperation.Assign:
-                return "=";
+                operation = "=";
+                break;
             case BinaryOperation.LessThan:
-                return "<";
+                operation = "<";
+                break;
             case BinaryOperation.GreaterThan:
-                return ">";
+                operation = ">";
+                break;
             case BinaryOperation.LessThanEqual:
-                return "<=";
+                operation = "<=";
+                break;
             case BinaryOperation.GreaterThanEqual:
-                return ">=";
+                operation = ">=";
+                break;
             case BinaryOperation.EqualEqual:
-                return "==";
+                operation = "==";
+                break;
             case BinaryOperation.ExclamationEqual:
-                return "!=";
+                operation = "!=";
+                break;
             case BinaryOperation.EqualEqualEqual:
-                return "===";
+                operation = "===";
+                break;
             case BinaryOperation.ExclamationEqualEqual:
-                return "!==";
+                operation = "!==";
+                break;
             default:
                 throw new Error(`Undefined vertex label`);
         }
+
+        return this.getLabelPrefix() + operation;
     }
 }
 
@@ -107,13 +125,42 @@ export class UnaryOperationVertex extends DataVertex {
     }
 
     public getLabel(): string {
+        let operation: string;
+
         switch(this.operation) {
             case UnaryOperation.Plus:
-                return "+";
+                operation = "+";
+                break;
             case UnaryOperation.Minus:
-                return "-";
+                operation = "-";
+                break;
             default:
                 throw new Error(`Undefined vertex label`);
         }
+
+        return this.getLabelPrefix() + operation;
+    }
+}
+
+export class IfVertex extends ControlVertex {
+    constructor() {
+        super();
+    }
+
+    public getLabel(): string {
+        return this.getLabelPrefix() + "if";
+    }
+}
+
+export class PhiVertex extends VariableVertex {
+    public ifId: number;
+
+    constructor(_name: string, _ifId: number) {
+        super(_name);
+        this.ifId = _ifId;
+    }
+
+    public getLabel(): string {
+        return this.getLabelPrefix() + "phi: " + this.name + " (if: " + String(this.ifId) + ")";
     }
 }

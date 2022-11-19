@@ -1,0 +1,19 @@
+digraph G {
+	0 [ label="0 | x" shape="rectangle" ];
+	1 [ label="1 | 0" shape="rectangle" ];
+	2 [ label="2 | true" shape="rectangle" ];
+	3 [ label="3 | if" shape="rectangle" ];
+	4 [ label="4 | 1" shape="rectangle" ];
+	5 [ label="5 | x" shape="rectangle" ];
+	6 [ label="6 | z" shape="rectangle" ];
+	7 [ label="7 | 5" shape="rectangle" ];
+	8 [ label="8 | phi: x (if: 3)" shape="rectangle" ];
+	9 [ label="9 | y" shape="rectangle" ];
+	1 -> 0 [ label="assign" ];
+	2 -> 3 [ label="cond" ];
+	4 -> 5 [ label="assign" ];
+	7 -> 6 [ label="assign" ];
+	5 -> 8 [ label="true-assign" ];
+	0 -> 8 [ label="false-assign" ];
+	8 -> 9 [ label="assign" ];
+}

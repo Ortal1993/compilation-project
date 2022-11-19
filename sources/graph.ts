@@ -24,7 +24,7 @@ export class Graph {
 		this.edges.push(newEdge);
 	}
 
-	public addVertex(vertexType: VertexType, properties: Object): number {
+	public addVertex(vertexType: VertexType, properties: Object = {}): number {
 		let newVertex: vertex.Vertex;
 		switch (vertexType) {
 			case VertexType.Const:
@@ -38,6 +38,12 @@ export class Graph {
 				break;
 			case VertexType.UnaryOperation:
 				newVertex = new vertex.UnaryOperationVertex(properties["operation"]);
+				break;
+			case VertexType.If:
+				newVertex = new vertex.IfVertex();
+				break;
+			case VertexType.Phi:
+				newVertex = new vertex.PhiVertex(properties["name"], properties["ifId"]);
 				break;
 			default:
 				throw new Error(`Undefined vertex type`);
