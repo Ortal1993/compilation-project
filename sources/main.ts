@@ -3,6 +3,7 @@ import { Graph } from "./graph";
 import { SymbolTable } from "./symbolTable";
 import { ConstTable } from "./constTable";
 import { VertexType, BinaryOperation, UnaryOperation } from "./types";
+import { stat } from "fs";
 
 class Analyzer {
 	private output: string;
@@ -10,6 +11,7 @@ class Analyzer {
 	private graph: Graph;
 	private symbolTable: SymbolTable;
 	private constTable: ConstTable;
+	private controlVertex: number;
 
 	public constructor( _output: string, _filesNames: string[]) {
 		this.output = _output;
@@ -17,22 +19,38 @@ class Analyzer {
 		this.graph = new Graph();
 		this.symbolTable = new SymbolTable();
 		this.constTable = new ConstTable(this.graph);
+		this.controlVertex = 0;
 	}
 
 	public run() {
-		this.createGraph()
+		this.buildGraph()
 	}
 
-	private createGraph() {
+	private buildGraph() {
+		this.initGraph();
 		const program = ts.createProgram(this.fileNames, {});
 		let sourceFiles = program.getSourceFiles().filter(sf => !sf.isDeclarationFile);
-		sourceFiles.forEach(sf => this.processSourceFile(sf));
+		sourceFiles.forEach(sf => this.processStatements(sf.statements));
 		this.graph.print(false, this.output);
 	}
 
-	private processSourceFile(sourceFile: ts.SourceFile): void {
-		sourceFile.statements.forEach(statement => {
+	private initGraph(): void {
+		this.controlVertex = this.graph.addVertex(VertexType.Start, {name: "__entryPoint__"});
+	}
+
+	private nextControl(nextControlId: number, label: string = "control") {
+		this.graph.addEdge(this.controlVertex, nextControlId, label);
+		this.controlVertex = nextControlId;
+	}
+
+	private processStatements(statements: ts.NodeArray<ts.Statement>): void {
+		let postponedFunctionStatements: Array<ts.FunctionDeclaration> = [];
+		statements.forEach(statement => {
 			switch (statement.kind) {
+				case ts.SyntaxKind.FunctionDeclaration:
+					this.processFunctionDeclaration(statement as ts.FunctionDeclaration);
+					postponedFunctionStatements.push(statement as ts.FunctionDeclaration);
+					break;
 				case ts.SyntaxKind.VariableStatement:
 					this.processVariableStatement(statement as ts.VariableStatement);
 					break;
@@ -42,10 +60,41 @@ class Analyzer {
 				case ts.SyntaxKind.IfStatement:
 					this.processIfStatement(statement as ts.IfStatement);
 					break;
+				case ts.SyntaxKind.ReturnStatement:
+					this.processReturnStatement(statement as ts.ReturnStatement);
+					break;
 				default:
 					throw new Error(`not implemented`);
 			}
 		});
+		this.processPostponedFunctionStatements(postponedFunctionStatements);
+	}
+
+	private processPostponedFunctionStatements(postponedFunctionStatements: Array<ts.FunctionDeclaration>): void {
+		let prevControlVertex = this.controlVertex;
+
+		postponedFunctionStatements.forEach(funcDeclaration => {
+			let funcName: string = (funcDeclaration.name as any).escapedText;
+			let funcStartNodeId: number = this.symbolTable.getIdByName(funcName);
+			this.controlVertex = funcStartNodeId;
+
+			funcDeclaration.parameters.forEach((parameter, position) => {
+				let parameterName: string = (parameter.name as any).escapedText;
+				let parameterNodeId: number = this.graph.addVertex(VertexType.Parameter,
+																   {name: parameterName, pos: position + 1, funcId: funcStartNodeId});
+				this.symbolTable.set(parameterName, parameterNodeId);
+			});
+
+			this.processStatements((funcDeclaration.body as ts.Block).statements);
+		});
+
+		this.controlVertex = prevControlVertex;
+	}
+
+	private processFunctionDeclaration(funcDeclaration: ts.FunctionDeclaration): void {
+		let funcName: string = (funcDeclaration.name as any).escapedText;
+		let funcStartNodeId: number = this.graph.addVertex(VertexType.Start, {name: funcName});
+		this.symbolTable.set(funcName, funcStartNodeId);
 	}
 
 	private processVariableStatement(varStatement: ts.VariableStatement): void {
@@ -61,12 +110,38 @@ class Analyzer {
 	}
 
 	private processExpressionStatement(expStatement: ts.ExpressionStatement): number {
-		return this.processBinaryExpression(expStatement.expression as ts.BinaryExpression);
+		switch (expStatement.expression.kind) {
+			case ts.SyntaxKind.BinaryExpression:
+				return this.processBinaryExpression(expStatement.expression as ts.BinaryExpression);
+			case ts.SyntaxKind.CallExpression:
+				return this.processCallExpression(expStatement.expression as ts.CallExpression);
+			default:
+				throw new Error(`not implemented`);
+		}
+	}
+
+	private processCallExpression(callExpression: ts.CallExpression): number {
+		let callNodeId: number = this.graph.addVertex(VertexType.Call);
+
+		this.nextControl(callNodeId);
+
+		callExpression.arguments.forEach((argument, pos) => {
+			let argumentNodeId: number = this.processExpression(argument);
+			this.graph.addEdge(argumentNodeId, callNodeId, "pos: " + String(pos + 1));
+		});
+
+		let startNodeId: number = this.processExpression(callExpression.expression);
+		this.graph.addEdge(callNodeId, startNodeId, "call");
+
+		return callNodeId;
 	}
 
 	private processIfStatement(ifStatement: ts.IfStatement) {
-		let expNodeId: number = this.processExpression(ifStatement.expression);
 		let ifNodeId: number = this.graph.addVertex(VertexType.If);
+
+		this.nextControl(ifNodeId);
+
+		let expNodeId: number = this.processExpression(ifStatement.expression);
 		this.graph.addEdge(expNodeId, ifNodeId, "cond");
 
 		let symbolTableCopy: Map<string, number> = this.symbolTable.getCopy();
@@ -75,8 +150,17 @@ class Analyzer {
 		let trueBranchSymbolTable: Map<string, number>;
 		let falseBranchSymbolTable: Map<string, number>;
 
+		let trueBranchNodeId: number = this.graph.addVertex(VertexType.Branch, {type: true});
+		let falseBranchNodeId: number = this.graph.addVertex(VertexType.Branch, {type: false});
+		let mergeNodeId: number = this.graph.addVertex(VertexType.Merge, {ifId: ifNodeId});
+
+		this.nextControl(trueBranchNodeId, "true");
 		changedVars = this.processIfBlock(ifStatement.thenStatement);
 		trueBranchSymbolTable = this.symbolTable.getCopy(changedVars);
+		this.graph.addEdge(this.controlVertex, mergeNodeId, "control");
+
+		this.controlVertex = ifNodeId;
+		this.nextControl(falseBranchNodeId, "false");
 
 		if (ifStatement.elseStatement === undefined) {
 			falseBranchSymbolTable = new Map<string, number>();
@@ -84,9 +168,11 @@ class Analyzer {
 		else {
 			changedVars = this.processIfBlock(ifStatement.elseStatement);
 			falseBranchSymbolTable = this.symbolTable.getCopy(changedVars);
+			this.graph.addEdge(this.controlVertex, mergeNodeId, "control");
 		}
 
-		// create phi vertex using all the 3 maps
+		this.nextControl(mergeNodeId);
+
 		this.createPhiVertices(symbolTableCopy, trueBranchSymbolTable, falseBranchSymbolTable, ifNodeId);
 	}
 
@@ -136,12 +222,17 @@ class Analyzer {
 					this.processVariableStatement(statement as ts.VariableStatement);
 					break;
 				case ts.SyntaxKind.ExpressionStatement:
-					let varNodeId: number = this.processExpressionStatement(statement as ts.ExpressionStatement);
-					changedVars.add(this.symbolTable.getNameById(varNodeId));
+					let result: number = this.processExpressionStatement(statement as ts.ExpressionStatement);
+					if ((statement as ts.ExpressionStatement).expression.kind === ts.SyntaxKind.BinaryExpression) {
+						changedVars.add(this.symbolTable.getNameById(result));
+					}
 					break;
 				case ts.SyntaxKind.IfStatement:
 					// TODO: add support for recursive if statements
 					this.processIfStatement(statement as ts.IfStatement);
+					break;
+				case ts.SyntaxKind.ReturnStatement:
+					this.processReturnStatement(statement as ts.ReturnStatement);
 					break;
 				default:
 					throw new Error(`not implemented`);
@@ -149,6 +240,16 @@ class Analyzer {
 		});
 
 		return changedVars;
+	}
+
+	private processReturnStatement(retStatement: ts.ReturnStatement): void {
+		let returnNodeId: number = this.graph.addVertex(VertexType.Return);
+		this.nextControl(returnNodeId);
+
+		if (retStatement.expression !== undefined) {
+			let expNodeId: number = this.processExpression(retStatement.expression);
+			this.graph.addEdge(expNodeId, returnNodeId, "value")
+		}
 	}
 
 	private processVariableDeclarationList(varDeclList: ts.VariableDeclarationList): void {
@@ -201,6 +302,9 @@ class Analyzer {
 				break;
 			case ts.SyntaxKind.Identifier:
 				expNodeId = this.processIdentifierExpression(expression as ts.Identifier);
+				break;
+			case ts.SyntaxKind.CallExpression:
+				expNodeId = this.processCallExpression(expression as ts.CallExpression);
 				break;
 			default:
 				throw new Error(`not implemented`);

@@ -57,5 +57,6 @@ npm run test
 * [x] Support logical operators for boolean expressions
 * [ ] Support recursive and complex if statements
 * [ ] Support while statements
-* [ ] Support function declarations
-* [ ] Support function calls
+* [x] Support function declarations
+* [x] Support function calls
+* [ ] Fix a bug where control edge is created with ReturnVertex as source

@@ -33,6 +33,9 @@ export class Graph {
 			case VertexType.Variable:
 				newVertex = new vertex.VariableVertex(properties["name"]);
 				break;
+			case VertexType.Parameter:
+				newVertex = new vertex.ParameterVertex(properties["name"], properties["pos"], properties["funcId"]);
+				break;
 			case VertexType.BinaryOperation:
 				newVertex = new vertex.BinaryOperationVertex(properties["operation"]);
 				break;
@@ -44,6 +47,21 @@ export class Graph {
 				break;
 			case VertexType.Phi:
 				newVertex = new vertex.PhiVertex(properties["name"], properties["ifId"]);
+				break;
+			case VertexType.Start:
+				newVertex = new vertex.StartVertex(properties["name"]);
+				break;
+			case VertexType.Call:
+				newVertex = new vertex.CallVertex();
+				break;
+			case VertexType.Branch:
+				newVertex = new vertex.BranchVertex(properties["type"]);
+				break;
+			case VertexType.Merge:
+				newVertex = new vertex.MergeVertex(properties["ifId"]);
+				break;
+			case VertexType.Return:
+				newVertex = new vertex.ReturnVertex();
 				break;
 			default:
 				throw new Error(`Undefined vertex type`);

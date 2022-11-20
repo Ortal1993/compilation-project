@@ -57,6 +57,22 @@ export class VariableVertex extends DataVertex {
     }
 }
 
+export class ParameterVertex extends VariableVertex {
+    public name: string;
+    public pos: number;
+    public funcId: number;
+
+    constructor(_name: string, _pos: number, _funcId: number) {
+        super(_name);
+        this.pos = _pos;
+        this.funcId = _funcId;
+    }
+
+    public getLabel(): string {
+        return this.getLabelPrefix() + "param (" + String(this.pos) + ") : " + this.name + " : (function: " + String(this.funcId) + ")";
+    }
+}
+
 export class BinaryOperationVertex extends DataVertex {
     public operation: BinaryOperation;
 
@@ -171,5 +187,64 @@ export class PhiVertex extends VariableVertex {
 
     public getLabel(): string {
         return this.getLabelPrefix() + "phi: " + this.name + " (if: " + String(this.ifId) + ")";
+    }
+}
+
+export class StartVertex extends ControlVertex {
+    public name: string;
+
+    constructor(_name: string) {
+        super();
+        this.name = _name;
+    }
+
+    public getLabel(): string {
+        return this.getLabelPrefix() + "start (function: " + this.name + ")";
+    }
+}
+
+export class CallVertex extends ControlVertex {
+    constructor() {
+        super();
+    }
+
+    public getLabel(): string {
+        return this.getLabelPrefix() + "call";
+    }
+}
+
+export class BranchVertex extends ControlVertex {
+    private type: boolean;
+
+    constructor(_type: boolean) {
+        super();
+        this.type = _type;
+    }
+
+    public getLabel(): string {
+        return this.getLabelPrefix() + String(this.type);
+    }
+}
+
+export class MergeVertex extends ControlVertex {
+    public ifId: number;
+
+    constructor(_ifId: number) {
+        super();
+        this.ifId = _ifId;
+    }
+
+    public getLabel(): string {
+        return this.getLabelPrefix() + "merge (if: " + String(this.ifId) + ")";
+    }
+}
+
+export class ReturnVertex extends ControlVertex {
+    constructor() {
+        super();
+    }
+
+    public getLabel(): string {
+        return this.getLabelPrefix() + "return";
     }
 }
