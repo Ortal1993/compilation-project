@@ -39,6 +39,8 @@ class Analyzer {
 	}
 
 	private nextControl(nextControlId: number, label: string = "control") {
+		// TODO: if this.controlVertex is ReturnVertex, then skip the next line.
+		// TODO: anyway, the next controlVertex should be nextControlId
 		this.graph.addEdge(this.controlVertex, nextControlId, label);
 		this.controlVertex = nextControlId;
 	}
@@ -154,13 +156,13 @@ class Analyzer {
 		let falseBranchNodeId: number = this.graph.addVertex(VertexType.Branch, {type: false});
 		let mergeNodeId: number = this.graph.addVertex(VertexType.Merge, {ifId: ifNodeId});
 
-		this.nextControl(trueBranchNodeId, "true");
+		this.nextControl(trueBranchNodeId, "control");
 		changedVars = this.processIfBlock(ifStatement.thenStatement);
 		trueBranchSymbolTable = this.symbolTable.getCopy(changedVars);
-		this.graph.addEdge(this.controlVertex, mergeNodeId, "control");
+		this.nextControl(mergeNodeId);
 
 		this.controlVertex = ifNodeId;
-		this.nextControl(falseBranchNodeId, "false");
+		this.nextControl(falseBranchNodeId, "control");
 
 		if (ifStatement.elseStatement === undefined) {
 			falseBranchSymbolTable = new Map<string, number>();
@@ -168,7 +170,6 @@ class Analyzer {
 		else {
 			changedVars = this.processIfBlock(ifStatement.elseStatement);
 			falseBranchSymbolTable = this.symbolTable.getCopy(changedVars);
-			this.graph.addEdge(this.controlVertex, mergeNodeId, "control");
 		}
 
 		this.nextControl(mergeNodeId);
