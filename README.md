@@ -2,7 +2,7 @@
 
 ## Install
 
-```bash
+```
 npm install
 ```
 
@@ -37,15 +37,24 @@ options:
 
 For example, running:
 
-```bash
+```
 npm run start -- --sample 2 --verbose
 ```
 
 will build the project, run it on the second sample in the samples directory and eventually print the graph.
 
+## Test
+
+Build the project and run each of the samples in the *tests/samples* directory. Then compare each of the output graphs to its matching golden graph, which are located in the *tests/goldens* directory.
+
+```
+npm run test
+```
+
 ## TODO
 
-* [ ] Create a constant table
+* [x] Create a constant table
+* [ ] Support logical operators for boolean expressions
 * [ ] Support recursive and complex if statements
 * [ ] Support while statements
 * [ ] Support function declarations
