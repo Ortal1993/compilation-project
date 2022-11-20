@@ -1,6 +1,7 @@
 import * as ts from "typescript";
 import { Graph } from "./graph";
 import { SymbolTable } from "./symbolTable";
+import { ConstTable } from "./constTable";
 import { VertexType, BinaryOperation, UnaryOperation } from "./types";
 
 class Analyzer {
@@ -8,12 +9,14 @@ class Analyzer {
 	private fileNames: string[];
 	private graph: Graph;
 	private symbolTable: SymbolTable;
+	private constTable: ConstTable;
 
 	public constructor( _output: string, _filesNames: string[]) {
 		this.output = _output;
 		this.fileNames = _filesNames;
 		this.graph = new Graph();
 		this.symbolTable = new SymbolTable();
+		this.constTable = new ConstTable(this.graph);
 	}
 
 	public run() {
@@ -208,19 +211,19 @@ class Analyzer {
 	private processNumericLiteral(numLiteral: ts.NumericLiteral): number {
 		let value: number = Number(numLiteral.text);
 
-		return this.graph.addVertex(VertexType.Const, {value: value});
+		return this.constTable.getId(value);
 	}
 
 	private processStringLiteral(strLiteral: ts.StringLiteral): number {
-		return this.graph.addVertex(VertexType.Const, {value: strLiteral.text});
+		return this.constTable.getId(strLiteral.text);
 	}
 
 	private processTrueLiteral(trueLiteral: ts.TrueLiteral): number {
-		return this.graph.addVertex(VertexType.Const, {value: true});
+		return this.constTable.getId(true);
 	}
 
 	private processFalseLiteral(falseLiteral: ts.FalseLiteral): number {
-		return this.graph.addVertex(VertexType.Const, {value: false});
+		return this.constTable.getId(false);
 	}
 
 	private processPrefixUnaryExpression(prefixUnaryExpression: ts.PrefixUnaryExpression): number {
