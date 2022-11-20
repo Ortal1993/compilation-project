@@ -44,7 +44,7 @@ do
             shift 1
             ;;
         -h | --help )
-            echo "Usage: run.sh [-n|--no-build] [-s|--sample <sample_index>] [-g|--graph-output <path-to-output-graph>] [-c|--clean] [-v|--verbose]"
+            echo "Usage: run.sh [-n|--no-build] [-s|--sample <sample_index>] [-g|--graph-output <output-graph-name>] [-c|--clean] [-v|--verbose]"
             exit 0
             ;;
         -- )

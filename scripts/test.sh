@@ -9,7 +9,7 @@ goldens_dir=$(realpath $tests_dir/goldens)
 
 # Build without running any samples
 
-bash $script_dir/run.sh
+bash $script_dir/run.sh --clean >/dev/null 2>&1
 
 if [ $? -ne 0 ]
 then
