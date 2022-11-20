@@ -8,3 +8,6 @@ let c: boolean = 4 == 5;
 let d: boolean = 4 != 5;
 let e: boolean = 4 === 5;
 let f: boolean = 4 !== 5;
+let a1: boolean = a && b;
+let a2: boolean = a || b;
+let a3: boolean = !a;

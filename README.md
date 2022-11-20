@@ -54,7 +54,7 @@ npm run test
 ## TODO
 
 * [x] Create a constant table
-* [ ] Support logical operators for boolean expressions
+* [x] Support logical operators for boolean expressions
 * [ ] Support recursive and complex if statements
 * [ ] Support while statements
 * [ ] Support function declarations

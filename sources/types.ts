@@ -9,14 +9,17 @@ export enum BinaryOperation {
     LessThanEqual,
     GreaterThanEqual,
     EqualEqual,
-    ExclamationEqual,
+    NotEqual,
     EqualEqualEqual,
-    ExclamationEqualEqual
+    NotEqualEqual,
+    And,
+    Or
 }
 
 export enum UnaryOperation {
     Plus,
-    Minus
+    Minus,
+    Not
 }
 
 export enum VertexType {

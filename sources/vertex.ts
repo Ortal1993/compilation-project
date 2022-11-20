@@ -99,14 +99,20 @@ export class BinaryOperationVertex extends DataVertex {
             case BinaryOperation.EqualEqual:
                 operation = "==";
                 break;
-            case BinaryOperation.ExclamationEqual:
+            case BinaryOperation.NotEqual:
                 operation = "!=";
                 break;
             case BinaryOperation.EqualEqualEqual:
                 operation = "===";
                 break;
-            case BinaryOperation.ExclamationEqualEqual:
+            case BinaryOperation.NotEqualEqual:
                 operation = "!==";
+                break;
+            case BinaryOperation.And:
+                operation = "&&";
+                break;
+            case BinaryOperation.Or:
+                operation = "||";
                 break;
             default:
                 throw new Error(`Undefined vertex label`);
@@ -133,6 +139,9 @@ export class UnaryOperationVertex extends DataVertex {
                 break;
             case UnaryOperation.Minus:
                 operation = "-";
+                break;
+            case UnaryOperation.Not:
+                operation = "!";
                 break;
             default:
                 throw new Error(`Undefined vertex label`);

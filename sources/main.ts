@@ -236,6 +236,9 @@ class Analyzer {
 			case ts.SyntaxKind.MinusToken:
 				unaryOperation = UnaryOperation.Minus;
 				break;
+			case ts.SyntaxKind.ExclamationToken:
+				unaryOperation = UnaryOperation.Not;
+				break;
 			default:
 				throw new Error(`not implemented`);
 		}
@@ -281,13 +284,19 @@ class Analyzer {
 				binaryOperation = BinaryOperation.EqualEqual;
 				break;
 			case ts.SyntaxKind.ExclamationEqualsToken:
-				binaryOperation = BinaryOperation.ExclamationEqual;
+				binaryOperation = BinaryOperation.NotEqual;
 				break;
 			case ts.SyntaxKind.EqualsEqualsEqualsToken:
 				binaryOperation = BinaryOperation.EqualEqualEqual;
 				break;
 			case ts.SyntaxKind.ExclamationEqualsEqualsToken:
-				binaryOperation = BinaryOperation.ExclamationEqualEqual;
+				binaryOperation = BinaryOperation.NotEqualEqual;
+				break;
+			case ts.SyntaxKind.AmpersandAmpersandToken:
+				binaryOperation = BinaryOperation.And;
+				break;
+			case ts.SyntaxKind.BarBarToken:
+				binaryOperation = BinaryOperation.Or;
 				break;
 			default:
 				throw new Error(`not implemented`);
