@@ -1,5 +1,6 @@
 digraph G {
-	0 [ label="0 | str" shape="rectangle" ];
-	1 [ label="1 | Hello World" shape="rectangle" ];
-	1 -> 0 [ label="assign" ];
+	0 [ label="0 | start (function: __entryPoint__)" shape="rectangle" ];
+	1 [ label="1 | str" shape="rectangle" ];
+	2 [ label="2 | Hello World" shape="rectangle" ];
+	2 -> 1 [ label="assign" ];
 }

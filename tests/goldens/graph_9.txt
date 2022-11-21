@@ -1,0 +1,38 @@
+digraph G {
+	0 [ label="0 | start (function: __entryPoint__)" shape="rectangle" ];
+	1 [ label="1 | start (function: fact)" shape="rectangle" ];
+	2 [ label="2 | call" shape="rectangle" ];
+	3 [ label="3 | 10" shape="rectangle" ];
+	4 [ label="4 | param (1) : n : (function: 1)" shape="rectangle" ];
+	5 [ label="5 | if" shape="rectangle" ];
+	6 [ label="6 | 1" shape="rectangle" ];
+	7 [ label="7 | <=" shape="rectangle" ];
+	8 [ label="8 | true" shape="rectangle" ];
+	9 [ label="9 | false" shape="rectangle" ];
+	10 [ label="10 | merge (if: 5)" shape="rectangle" ];
+	11 [ label="11 | return" shape="rectangle" ];
+	12 [ label="12 | return" shape="rectangle" ];
+	13 [ label="13 | call" shape="rectangle" ];
+	14 [ label="14 | -" shape="rectangle" ];
+	15 [ label="15 | *" shape="rectangle" ];
+	0 -> 2 [ label="control" ];
+	3 -> 2 [ label="pos: 1" ];
+	2 -> 1 [ label="call" ];
+	1 -> 5 [ label="control" ];
+	6 -> 7 [ label="right" ];
+	4 -> 7 [ label="left" ];
+	7 -> 5 [ label="cond" ];
+	5 -> 8 [ label="control" ];
+	8 -> 11 [ label="control" ];
+	6 -> 11 [ label="value" ];
+	5 -> 9 [ label="control" ];
+	9 -> 10 [ label="control" ];
+	10 -> 12 [ label="control" ];
+	6 -> 14 [ label="right" ];
+	4 -> 14 [ label="left" ];
+	14 -> 13 [ label="pos: 1" ];
+	13 -> 1 [ label="call" ];
+	13 -> 15 [ label="right" ];
+	4 -> 15 [ label="left" ];
+	15 -> 12 [ label="value" ];
+}

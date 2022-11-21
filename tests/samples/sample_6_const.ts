@@ -7,7 +7,7 @@ let a: string = "hello";
 let b: string = "hello";
 let c: string = "hello world";
 
-let d: bool = true;
-let e: bool = false;
-let f: bool = true;
-let g: bool = false;
+let d: boolean = true;
+let e: boolean = false;
+let f: boolean = true;
+let g: boolean = false;

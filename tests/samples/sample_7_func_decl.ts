@@ -2,8 +2,8 @@ function add(a: number, b: number) {
     return a + b;
 }
 
-function sub(a: number, b: number) {
-    return a - b;
+function sub(c: number, d: number) {
+    return c - d;
 }
 
 let x: number = 10;

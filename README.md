@@ -59,4 +59,5 @@ npm run test
 * [ ] Support while statements
 * [x] Support function declarations
 * [x] Support function calls
-* [ ] Fix a bug where control edge is created with ReturnVertex as source
+* [ ] Symbol table upgrade
+* [ ] Each ReturnVertex should save a reference to its matching function start vertex
