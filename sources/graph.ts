@@ -30,11 +30,8 @@ export class Graph {
             case VertexType.Const:
                 newVertex = new vertex.ConstVertex(properties["value"]);
                 break;
-            case VertexType.Variable:
-                newVertex = new vertex.VariableVertex(properties["name"]);
-                break;
             case VertexType.Parameter:
-                newVertex = new vertex.ParameterVertex(properties["name"], properties["pos"], properties["funcId"]);
+                newVertex = new vertex.ParameterVertex(properties["pos"], properties["funcId"]);
                 break;
             case VertexType.BinaryOperation:
                 newVertex = new vertex.BinaryOperationVertex(properties["operation"]);
@@ -46,7 +43,7 @@ export class Graph {
                 newVertex = new vertex.IfVertex();
                 break;
             case VertexType.Phi:
-                newVertex = new vertex.PhiVertex(properties["name"], properties["ifId"]);
+                newVertex = new vertex.PhiVertex(properties["ifId"]);
                 break;
             case VertexType.Start:
                 newVertex = new vertex.StartVertex(properties["name"]);

@@ -17,12 +17,6 @@ export class SymbolTable {
         return symbolTableCopy;
     }
 
-    public checkExists(name: string): void {
-        if (!this.symbolTable.has(name)) {
-            throw new Error(`Symbol '${name}' does not exist in the symbol table`);
-        }
-    }
-
     public set(name: string, id: number): void {
         this.symbolTable.set(name, id);
     }

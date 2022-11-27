@@ -44,32 +44,18 @@ export class ConstVertex extends DataVertex {
     }
 }
 
-export class VariableVertex extends DataVertex {
-    public name: string;
-
-    constructor(_name: string) {
-        super();
-        this.name = _name;
-    }
-
-    public getLabel(): string {
-        return this.getLabelPrefix() + this.name;
-    }
-}
-
-export class ParameterVertex extends VariableVertex {
-    public name: string;
+export class ParameterVertex extends DataVertex {
     public pos: number;
     public funcId: number;
 
-    constructor(_name: string, _pos: number, _funcId: number) {
-        super(_name);
+    constructor(_pos: number, _funcId: number) {
+        super();
         this.pos = _pos;
         this.funcId = _funcId;
     }
 
     public getLabel(): string {
-        return this.getLabelPrefix() + "param (" + String(this.pos) + ") : " + this.name + " : (function: " + String(this.funcId) + ")";
+        return this.getLabelPrefix() + "param (" + String(this.pos) + "): (function: " + String(this.funcId) + ")";
     }
 }
 
@@ -177,16 +163,16 @@ export class IfVertex extends ControlVertex {
     }
 }
 
-export class PhiVertex extends VariableVertex {
+export class PhiVertex extends DataVertex {
     public ifId: number;
 
-    constructor(_name: string, _ifId: number) {
-        super(_name);
+    constructor(_ifId: number) {
+        super();
         this.ifId = _ifId;
     }
 
     public getLabel(): string {
-        return this.getLabelPrefix() + "phi: " + this.name + " (if: " + String(this.ifId) + ")";
+        return this.getLabelPrefix() + "phi " + " (if: " + String(this.ifId) + ")";
     }
 }
 

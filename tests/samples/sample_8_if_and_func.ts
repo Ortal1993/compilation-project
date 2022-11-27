@@ -18,3 +18,4 @@ else {
 }
 
 let w: number = x;
+add(w, x);

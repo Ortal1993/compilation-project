@@ -24,7 +24,6 @@ export enum UnaryOperation {
 
 export enum VertexType {
     Const,
-    Variable,
     Parameter,
     BinaryOperation,
     UnaryOperation,

@@ -25,6 +25,10 @@ class Analyzer {
     public run() {
         this.buildGraph();
     }
+        
+    private static getVarName(identifierExpression: ts.Identifier): string{
+        return (identifierExpression as any).escapedText;
+    }
 
     private buildGraph() {
         this.initGraph();
@@ -88,7 +92,7 @@ class Analyzer {
             funcDeclaration.parameters.forEach((parameter: ts.ParameterDeclaration, position: number) => {
                 let parameterName: string = (parameter.name as any).escapedText;
                 let parameterNodeId: number = this.graph.addVertex(VertexType.Parameter,
-                                                                   {name: parameterName, pos: position + 1, funcId: funcStartNodeId});
+                                                                   {pos: position + 1, funcId: funcStartNodeId});
                 this.symbolTable.set(parameterName, parameterNodeId);
             });
 
@@ -197,7 +201,7 @@ class Analyzer {
                 }
             }
             else {
-                let phiNodeId: number = this.graph.addVertex(VertexType.Phi, {name: varName, ifId: ifNodeId});
+                let phiNodeId: number = this.graph.addVertex(VertexType.Phi, {ifId: ifNodeId});
                 if (trueBranchNodeId && falseBranchNodeId) {
                     this.graph.addEdge(trueBranchNodeId, phiNodeId, "true-assign");
                     this.graph.addEdge(falseBranchNodeId, phiNodeId, "false-assign");
@@ -274,14 +278,15 @@ class Analyzer {
 
     private processVariableDeclaration(varDecl: ts.VariableDeclaration): void {
         let varName: string = (varDecl.name as any).escapedText;
-        let varNodeId: number = this.graph.addVertex(VertexType.Variable, {name: varName});
 
         if (varDecl.initializer !== undefined) {
             let expNodeId: number = this.processExpression(varDecl.initializer as ts.Expression);
-            this.graph.addEdge(expNodeId, varNodeId, "assign");
+            this.symbolTable.set(varName, expNodeId);
         }
-
-        this.symbolTable.set(varName, varNodeId);
+        else {
+            this.symbolTable.set(varName, -1);
+        }
+        
     }
 
     private processExpression(expression: ts.Expression): number {
@@ -416,9 +421,10 @@ class Analyzer {
 
         let rightNodeId: number = this.processExpression(binExpression.right);
         if (isAssignOperation) {
-            let leftNodeId: number = this.processIdentifierExpression(binExpression.left as ts.Identifier, true);
-            this.graph.addEdge(rightNodeId, leftNodeId, "assign");
-            return leftNodeId;
+            // for cases a variable that is already defined is being re-assigned
+            let varName: string = (binExpression.left as any).escapedText;
+            this.symbolTable.set(varName, rightNodeId);
+            return rightNodeId;
         }
         else {
             let leftNodeId: number = this.processExpression(binExpression.left);
@@ -433,15 +439,9 @@ class Analyzer {
         return this.processExpression(parenthesizedExpression.expression);
     }
 
-    private processIdentifierExpression(identifierExpression: ts.Identifier, createNewNode: boolean = false): number {
-        let varName: string = (identifierExpression as any).escapedText;
-        this.symbolTable.checkExists(varName);
-
-        if (createNewNode) {
-            let newNodeId: number = this.graph.addVertex(VertexType.Variable, {name: varName});
-            this.symbolTable.set(varName, newNodeId);
-            return newNodeId;
-        }
+    //for cases we use the identifier's value
+    private processIdentifierExpression(identifierExpression: ts.Identifier): number {
+        let varName: string = Analyzer.getVarName(identifierExpression);
         return this.symbolTable.getIdByName(varName);
     }
 }
