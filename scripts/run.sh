@@ -192,8 +192,7 @@ then
         if [ $verbosity = true ]
         then
             echo "INFO: Analyzer finished successfully"
-            echo "INFO: Printing output:"
-            cat $output_dir/$output
+            echo "INFO: Graph output path: $output_dir/$output"
         fi
     fi
 else
