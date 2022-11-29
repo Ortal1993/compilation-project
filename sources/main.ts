@@ -264,9 +264,8 @@ class Analyzer {
     }
 
     private processReturnStatement(retStatement: ts.ReturnStatement): void {
-        // TODO: ReturnVertex should have funcId property
-        // TODO: set this property to be the function start nodeId of the current symbolTable scope
-        let returnNodeId: number = this.graph.addVertex(VertexType.Return);
+        let currentFuncNodeId: number = this.symbolTable.getCurrentFunctionNodeId();
+        let returnNodeId: number = this.graph.addVertex(VertexType.Return, {funcId: currentFuncNodeId});
         this.nextControl(returnNodeId);
 
         if (retStatement.expression !== undefined) {

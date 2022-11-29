@@ -226,11 +226,14 @@ export class MergeVertex extends ControlVertex {
 }
 
 export class ReturnVertex extends ControlVertex {
-    constructor() {
+    public funcId: number;
+
+    constructor(_funcId: number) {
         super();
+        this.funcId = _funcId;
     }
 
     public getLabel(): string {
-        return this.getLabelPrefix() + "return";
+        return this.getLabelPrefix() + "return (function: " + String(this.funcId) + ")";
     }
 }

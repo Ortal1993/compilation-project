@@ -58,7 +58,7 @@ export class Graph {
                 newVertex = new vertex.MergeVertex(properties["ifId"]);
                 break;
             case VertexType.Return:
-                newVertex = new vertex.ReturnVertex();
+                newVertex = new vertex.ReturnVertex(properties["funcId"]);
                 break;
             default:
                 throw new Error(`Undefined vertex type`);

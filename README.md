@@ -62,4 +62,4 @@ npm run test
 * [x] Support function declarations
 * [x] Support function calls
 * [ ] Symbol table upgrade
-* [ ] Each ReturnVertex should save a reference to its matching function start vertex
+* [x] Each ReturnVertex should save a reference to its matching function start vertex

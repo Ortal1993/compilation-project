@@ -99,6 +99,20 @@ class Scope {
             }
         });
     }
+
+    public getFunctionNodeId(): number | undefined {
+        let functionNodeId: number | undefined = undefined;
+        let found: boolean = false;
+
+        this.entries.forEach((entry: Entry) => {
+            if (entry.isFunc() && !found) {
+                functionNodeId = entry.getNodeId();
+                found = true;
+            }
+        });
+
+        return functionNodeId;
+    }
 }
 
 export class SymbolTable {
@@ -173,5 +187,16 @@ export class SymbolTable {
         });
 
         return symbolTableCopy;
+    }
+
+    public getCurrentFunctionNodeId(): number {
+        for (let scope of this.scopes) {
+            let functionNodeId: number | undefined = scope.getFunctionNodeId();
+            if (functionNodeId !== undefined) {
+                return functionNodeId;
+            }
+        }
+
+        return 0;
     }
 }

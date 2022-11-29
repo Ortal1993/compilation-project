@@ -10,8 +10,8 @@ digraph G {
 	8 [ label="8 | true" shape="rectangle" ];
 	9 [ label="9 | false" shape="rectangle" ];
 	10 [ label="10 | merge (if: 5)" shape="rectangle" ];
-	11 [ label="11 | return" shape="rectangle" ];
-	12 [ label="12 | return" shape="rectangle" ];
+	11 [ label="11 | return (function: 1)" shape="rectangle" ];
+	12 [ label="12 | return (function: 1)" shape="rectangle" ];
 	13 [ label="13 | call" shape="rectangle" ];
 	14 [ label="14 | -" shape="rectangle" ];
 	15 [ label="15 | *" shape="rectangle" ];
