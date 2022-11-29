@@ -55,11 +55,10 @@ npm run test
 
 ## TODO
 
-* [x] Create a constant table
-* [x] Support logical operators for boolean expressions
 * [ ] Support recursive and complex if statements
 * [ ] Support while statements
 * [x] Support function declarations
 * [x] Support function calls
-* [ ] Symbol table upgrade
+* [x] Symbol table upgrade
+* [ ] Pushing and poping symbol table scopes at each block
 * [x] Each ReturnVertex should save a reference to its matching function start vertex
