@@ -7,4 +7,4 @@ else {
     let z: number = 5;
 }
 
-let y: number = x;
+let y: number = x + 1;

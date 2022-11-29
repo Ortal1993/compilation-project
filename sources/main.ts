@@ -32,16 +32,27 @@ class Analyzer {
 
     private buildGraph() {
         this.initGraph();
+        this.initSymbolTable();
 
         const program = ts.createProgram([this.sourceName], {});
         let sourceFiles = program.getSourceFiles().filter((sourceFile: ts.SourceFile) => !sourceFile.isDeclarationFile);
         sourceFiles.forEach((sourceFile: ts.SourceFile) => this.processStatements(sourceFile.statements));
 
         this.graph.print(false, this.output);
+
+        this.destroySymbolTable();
     }
 
     private initGraph(): void {
         this.controlVertex = this.graph.addVertex(VertexType.Start, {name: "__entryPoint__"});
+    }
+
+    private initSymbolTable(): void {
+        this.symbolTable.addNewScope();
+    }
+
+    private destroySymbolTable(): void {
+        this.symbolTable.removeCurrentScope();
     }
 
     private nextControl(nextControlId: number) {
@@ -93,7 +104,7 @@ class Analyzer {
                 let parameterName: string = (parameter.name as any).escapedText;
                 let parameterNodeId: number = this.graph.addVertex(VertexType.Parameter,
                                                                    {pos: position + 1, funcId: funcStartNodeId});
-                this.symbolTable.set(parameterName, parameterNodeId);
+                this.symbolTable.addSymbol(parameterName, parameterNodeId, false, true);
             });
 
             this.processStatements((funcDeclaration.body as ts.Block).statements);
@@ -105,7 +116,7 @@ class Analyzer {
     private processFunctionDeclaration(funcDeclaration: ts.FunctionDeclaration): void {
         let funcName: string = (funcDeclaration.name as any).escapedText;
         let funcStartNodeId: number = this.graph.addVertex(VertexType.Start, {name: funcName});
-        this.symbolTable.set(funcName, funcStartNodeId);
+        this.symbolTable.addSymbol(funcName, funcStartNodeId, true);
     }
 
     private processVariableStatement(varStatement: ts.VariableStatement): void {
@@ -218,7 +229,7 @@ class Analyzer {
                     // TODO: assert (remove after testing)
                     throw new Error(`logical error`);
                 }
-                this.symbolTable.set(varName, phiNodeId)
+                this.symbolTable.updateNodeId(varName, phiNodeId);
             }
         });
     }
@@ -281,10 +292,10 @@ class Analyzer {
 
         if (varDecl.initializer !== undefined) {
             let expNodeId: number = this.processExpression(varDecl.initializer as ts.Expression);
-            this.symbolTable.set(varName, expNodeId);
+            this.symbolTable.addSymbol(varName, expNodeId, false, true);
         }
         else {
-            this.symbolTable.set(varName, -1);
+            this.symbolTable.addSymbol(varName, 0, false, false);
         }
         
     }
@@ -423,7 +434,7 @@ class Analyzer {
         if (isAssignOperation) {
             // for cases a variable that is already defined is being re-assigned
             let varName: string = (binExpression.left as any).escapedText;
-            this.symbolTable.set(varName, rightNodeId);
+            this.symbolTable.updateNodeId(varName, rightNodeId);
             return rightNodeId;
         }
         else {
