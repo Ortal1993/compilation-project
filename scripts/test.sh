@@ -31,7 +31,7 @@ do
 
     status=OK
 
-    bash $script_dir/run.sh --no-build --sample $i --graph-output $graph_output
+    bash $script_dir/run.sh --no-build --sample $i --output $graph_output
 
     if [ $? -ne 0 ]
     then

@@ -9,14 +9,13 @@ samples_dir=$(realpath $root_dir/tests/samples)
 
 # Parse command line arguments
 
-sample=0
 build=true
-graph_output=graph.txt
+output=graph.txt
 clean=false
 verbosity=false
 
-short_opts=n,s:,g:,c,v,h
-long_opts=no-build,sample:,graph-output:,clean,verbose,help
+short_opts=n,i:,s:,o:,v,c,h
+long_opts=no-build,input:,sample:,output:,verbose,clean,help
 opts=$(getopt --options $short_opts --longoptions $long_opts -- "$@")
 eval set -- "$opts"
 
@@ -27,12 +26,16 @@ do
             build=false
             shift 1
             ;;
+        -i | --input )
+            input=$2
+            shift 2
+            ;;
         -s | --sample )
             sample=$2
             shift 2
             ;;
-        -g | --graph-output )
-            graph_output=$2
+        -o | --output )
+            output=$2
             shift 2
             ;;
         -v | --verbose )
@@ -44,7 +47,23 @@ do
             shift 1
             ;;
         -h | --help )
-            echo "Usage: run.sh [-n|--no-build] [-s|--sample <sample_index>] [-g|--graph-output <output-graph-name>] [-c|--clean] [-v|--verbose]"
+            echo "Usage: npm run start -- [options]
+
+options:
+    -n | --no-build
+        Skip build stage
+    -i | --input INPUT
+        Run the analyzer on input file named <INPUT> (default: do not run anything)
+    -s | --sample SAMPLE
+        Run the analyzer on sample with index <SAMPLE> (default: do not run anything)
+    -o | --output OUTPUT
+        Save the graph inside file named <OUTPUT> (default: graph.txt)
+    -v | --verbose
+        Print logs and output results
+    -c | --clean
+        Before building, remove build and output directories
+    -h | --help
+        Show this help message and exit"
             exit 0
             ;;
         -- )
@@ -58,7 +77,7 @@ done
 
 if [ $clean = true ]
 then
-   if [ $verbosity = true ]
+    if [ $verbosity = true ]
     then
         echo "INFO: Removing build directory"
         echo ">> rm -rf $build_dir"
@@ -72,7 +91,7 @@ then
         exit 1
     fi
 
-   if [ $verbosity = true ]
+    if [ $verbosity = true ]
     then
         echo "INFO: Removing output directory"
         echo ">> rm -rf $output_dir"
@@ -102,8 +121,6 @@ then
         exit 1
     fi
 else
-    # Run tsc command
-
     if [ $verbosity = true ]
     then
         echo "INFO: Running build command"
@@ -126,18 +143,24 @@ fi
 
 # Run stage
 
-if [ $sample -ne 0 ]
+if [ ! -z $sample ] || [ ! -z $input ]
 then
-    # Find sample path
-
-    sample_path=$(find $samples_dir -name sample_$sample\_*.ts)
-    if [ -z $sample_path ] || [ ! -e $sample_path ]
+    if [ ! -z $input ]
     then
-        echo "ERROR: Could not find sample file with index $sample"
-        exit 1
+        input_path=$(realpath $input)
+        if [ -z $input_path ] || [ ! -e $input_path ]
+        then
+            echo "ERROR: Could not find input file $input"
+            exit 1
+        fi
+    else
+        input_path=$(find $samples_dir -name sample_$sample\_*.ts)
+        if [ -z $input_path ] || [ ! -e $input_path ]
+        then
+            echo "ERROR: Could not find sample file with index $sample"
+            exit 1
+        fi
     fi
-
-    # Create output directory
 
     if [ $verbosity = true ]
     then
@@ -153,15 +176,13 @@ then
         exit 1
     fi
 
-    # Run node command
-
     if [ $verbosity = true ]
     then
         echo "INFO: Running analyzer"
-        echo ">> node $build_dir/main.js $output_dir/$graph_output $sample_path"
+        echo ">> node $build_dir/main.js $output_dir/$output $input_path"
     fi
 
-    node $build_dir/main.js $output_dir/$graph_output $sample_path
+    node $build_dir/main.js $output_dir/$output $input_path
 
     if [ $? -ne 0 ]
     then
@@ -172,13 +193,13 @@ then
         then
             echo "INFO: Analyzer finished successfully"
             echo "INFO: Printing output:"
-            cat $output_dir/$graph_output
+            cat $output_dir/$output
         fi
     fi
 else
     if [ $verbosity = true ]
     then
-        echo "INFO: No sample was specified"
+        echo "INFO: No sample or input were specified"
     fi
 fi
 

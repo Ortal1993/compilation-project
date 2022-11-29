@@ -15,21 +15,23 @@ If a sample argument is given, run it on this sample.
 A graph file corresponding to the sample is written to the *output* directory.
 
 ```
-npm run start -- [options]
+Usage: npm run start -- [options]
 
 options:
     -n | --no-build
         Skip build stage
+    -i | --input INPUT
+        Run the analyzer on input file named <INPUT> (default: do not run anything)
     -s | --sample SAMPLE
         Run the analyzer on sample with index <SAMPLE> (default: do not run anything)
-    -g | --graph-output GRAPH_OUTPUT
-        Save the graph inside file named <GRAPH_OUTPUT> (default: graph.txt)
+    -o | --output OUTPUT
+        Save the graph inside file named <OUTPUT> (default: graph.txt)
     -v | --verbose
         Print logs and output results
     -c | --clean
         Before building, remove build and output directories
     -h | --help
-        Shows usage command 
+        Show this help message and exit
 ```
 
 * Samples can be found in *tests/samples* directory.
