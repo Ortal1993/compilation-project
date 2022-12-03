@@ -12,6 +12,7 @@ class Analyzer {
     private symbolTable: SymbolTable;
     private constTable: ConstTable;
     private controlVertex: number;
+    private functionsStack: Array<number>; //number - nodeId of start vertex
 
     public constructor( _output: string, _sourceName: string) {
         this.output = _output;
@@ -20,6 +21,7 @@ class Analyzer {
         this.symbolTable = new SymbolTable();
         this.constTable = new ConstTable(this.graph);
         this.controlVertex = 0;
+        this.functionsStack = new Array<number>();
     }
 
     public run() {
@@ -100,6 +102,9 @@ class Analyzer {
             let funcStartNodeId: number = this.symbolTable.getIdByName(funcName);
             this.controlVertex = funcStartNodeId;
 
+            this.symbolTable.addNewScope();
+            this.functionsStack.unshift(funcStartNodeId);
+
             funcDeclaration.parameters.forEach((parameter: ts.ParameterDeclaration, position: number) => {
                 let parameterName: string = (parameter.name as any).escapedText;
                 let parameterNodeId: number = this.graph.addVertex(VertexType.Parameter,
@@ -108,6 +113,9 @@ class Analyzer {
             });
 
             this.processStatements((funcDeclaration.body as ts.Block).statements);
+
+            this.functionsStack.shift();
+            this.symbolTable.removeCurrentScope();
         });
 
         this.controlVertex = prevControlVertex;
@@ -152,7 +160,7 @@ class Analyzer {
             this.graph.addEdge(argumentNodeId, callNodeId, "pos: " + String(pos + 1));
         });
 
-        let startNodeId: number = this.processExpression(callExpression.expression);
+        let startNodeId: number = this.processExpression(callExpression.expression);//callExpression.expression - name of function
         this.graph.addEdge(callNodeId, startNodeId, "call");
 
         return callNodeId;
@@ -236,7 +244,7 @@ class Analyzer {
 
     private processIfBlock(statements: ts.Statement) {
         let changedVars: Set<string> = new Set<string>();
-
+        this.symbolTable.addNewScope();
         statements.forEachChild(statement => {
             switch (statement.kind) {
                 case ts.SyntaxKind.VariableStatement:
@@ -259,12 +267,12 @@ class Analyzer {
                     throw new Error(`not implemented`);
             }
         });
-
+        this.symbolTable.removeCurrentScope();
         return changedVars;
     }
 
     private processReturnStatement(retStatement: ts.ReturnStatement): void {
-        let currentFuncNodeId: number = this.symbolTable.getCurrentFunctionNodeId();
+        let currentFuncNodeId: number = this.functionsStack[0];
         let returnNodeId: number = this.graph.addVertex(VertexType.Return, {funcId: currentFuncNodeId});
         this.nextControl(returnNodeId);
 

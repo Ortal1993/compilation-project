@@ -1,17 +1,18 @@
 class Entry {
+    private name: string;
     private nodeId: number;
     private func: boolean;
     private init: boolean;
 
-    public constructor(_nodeId: number, _func: boolean, _init: boolean) {
+    public constructor(_name: string, _nodeId: number, _func: boolean, _init: boolean) {
+        this.name = _name;
         this.nodeId = _nodeId;
         this.func = _func;
         this.init = _init;
     }
 
-    public updateNodeId(newNodeId: number): void {
-        this.nodeId = newNodeId;
-        this.init = true;
+    public getName(): string {
+        return this.name;
     }
 
     public getNodeId(): number {
@@ -25,35 +26,45 @@ class Entry {
     public isInit(): boolean {
         return this.init;
     }
+
+    public updateNodeId(newNodeId: number): void {
+        this.nodeId = newNodeId;
+        this.init = true;
+    }    
 }
 
 class Scope {
-    public entries: Map<string, Entry>;
+    public entries: Array<Entry>;
 
     public constructor() {
-        this.entries = new Map<string, Entry>();
+        this.entries = new Array<Entry>();
     }
 
     public isEntryExists(name: string): boolean {
-        return this.entries.has(name);
+        for (let entry of this.entries) {
+            if(entry.getName() === name) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public getEntry(name: string): Entry | undefined {
-        return this.entries.get(name);
+        for (let entry of this.entries) {
+            if(entry.getName() === name) {
+                return entry;
+            }
+        }
+        return undefined;
     }
 
     public getEntryNameByNodeId(nodeId: number): string | undefined {
-        let symbolName: string | undefined = undefined;
-        let found: boolean = false;
-
-        this.entries.forEach((entry: Entry, name: string) => {
-            if (entry.getNodeId() === nodeId && !found) {
-                symbolName = name;
-                found = true;
+        for (let entry of this.entries) {
+            if(entry.getNodeId() === nodeId) {
+                return entry.getName();
             }
-        });
-
-        return symbolName;
+        }
+        return undefined;
     }
 
     public getEntryNodeId(name: string): number | undefined {
@@ -81,8 +92,8 @@ class Scope {
     }
 
     public addEntry(name: string, nodeId: number, func: boolean, init: boolean): void {
-        let newEntry: Entry = new Entry(nodeId, func, init);
-        this.entries.set(name, newEntry);
+        let newEntry: Entry = new Entry(name, nodeId, func, init);
+        this.entries.unshift(newEntry);
     }
 
     public updateEntryNodeId(name: string, nodeId: number): void {
@@ -92,27 +103,15 @@ class Scope {
         }
     }
 
+    //varNames - all the variables that can change in if blocks
     public getCopy(varNames: Set<string> | null, symbolTableCopy: Map<string, number>) {
-        this.entries.forEach((entry: Entry, name: string) => {
-            if ((varNames === null || varNames.has(name)) && !symbolTableCopy.has(name) && !entry.isFunc()) {
-                symbolTableCopy.set(name, entry.getNodeId());
-            }
-        });
-    }
-
-    public getFunctionNodeId(): number | undefined {
-        let functionNodeId: number | undefined = undefined;
-        let found: boolean = false;
-
         this.entries.forEach((entry: Entry) => {
-            if (entry.isFunc() && !found) {
-                functionNodeId = entry.getNodeId();
-                found = true;
+            if ((varNames === null || varNames.has(entry.getName())) && !symbolTableCopy.has(entry.getName()) && !entry.isFunc()) {
+                symbolTableCopy.set(entry.getName(), entry.getNodeId());
             }
         });
-
-        return functionNodeId;
     }
+
 }
 
 export class SymbolTable {
@@ -189,14 +188,4 @@ export class SymbolTable {
         return symbolTableCopy;
     }
 
-    public getCurrentFunctionNodeId(): number {
-        for (let scope of this.scopes) {
-            let functionNodeId: number | undefined = scope.getFunctionNodeId();
-            if (functionNodeId !== undefined) {
-                return functionNodeId;
-            }
-        }
-
-        return 0;
-    }
 }

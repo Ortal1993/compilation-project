@@ -62,3 +62,5 @@ npm run test
 * [x] Symbol table upgrade
 * [ ] Pushing and poping symbol table scopes at each block
 * [x] Each ReturnVertex should save a reference to its matching function start vertex
+* [ ] Init property in symbol table's entry is incorrect
+* [ ] typedef for nodeId
