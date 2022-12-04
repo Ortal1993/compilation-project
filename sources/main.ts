@@ -166,7 +166,7 @@ class Analyzer {
         return callNodeId;
     }
 
-    private processIfStatement(ifStatement: ts.IfStatement) {
+    private processIfStatement(ifStatement: ts.IfStatement): Set<string> {
         let ifNodeId: number = this.graph.addVertex(VertexType.If);
 
         this.nextControl(ifNodeId);
@@ -176,6 +176,7 @@ class Analyzer {
 
         let symbolTableCopy: Map<string, number> = this.symbolTable.getCopy();
 
+        let allChangedVars: Set<string> = new Set<string>();
         let changedVars: Set<string>;
         let trueBranchSymbolTable: Map<string, number>;
         let falseBranchSymbolTable: Map<string, number>;
@@ -186,6 +187,7 @@ class Analyzer {
 
         this.nextControl(trueBranchNodeId);
         changedVars = this.processIfBlock(ifStatement.thenStatement);
+        changedVars.forEach((e : string) => { allChangedVars.add(e); });
         trueBranchSymbolTable = this.symbolTable.getCopy(changedVars);
         this.nextControl(mergeNodeId);
 
@@ -196,13 +198,23 @@ class Analyzer {
             falseBranchSymbolTable = new Map<string, number>();
         }
         else {
-            changedVars = this.processIfBlock(ifStatement.elseStatement);
+            // In case we have else-if then ifStatement.elseStatement is a ifStatement itself.
+            // Otherwise, the ifStatement.elseStatement is a block of the false branch.
+            if (ifStatement.elseStatement.kind === ts.SyntaxKind.IfStatement) {
+                changedVars = this.processIfStatement(ifStatement.elseStatement as ts.IfStatement);
+            }
+            else {
+                changedVars = this.processIfBlock(ifStatement.elseStatement);
+            }
+            changedVars.forEach((e : string) => { allChangedVars.add(e); });
             falseBranchSymbolTable = this.symbolTable.getCopy(changedVars);
         }
 
         this.nextControl(mergeNodeId);
 
         this.createPhiVertices(symbolTableCopy, trueBranchSymbolTable, falseBranchSymbolTable, ifNodeId);
+
+        return allChangedVars;
     }
 
     private createPhiVertices(symbolTableCopy: Map<string, number>,
@@ -251,14 +263,14 @@ class Analyzer {
                     this.processVariableStatement(statement as ts.VariableStatement);
                     break;
                 case ts.SyntaxKind.ExpressionStatement:
-                    let result: number = this.processExpressionStatement(statement as ts.ExpressionStatement);
+                    let expressionResult: number = this.processExpressionStatement(statement as ts.ExpressionStatement);
                     if ((statement as ts.ExpressionStatement).expression.kind === ts.SyntaxKind.BinaryExpression) {
-                        changedVars.add(this.symbolTable.getNameById(result));
+                        changedVars.add(this.symbolTable.getNameById(expressionResult));
                     }
                     break;
                 case ts.SyntaxKind.IfStatement:
-                    // TODO: add support for recursive if statements
-                    this.processIfStatement(statement as ts.IfStatement);
+                    let ifResult: Set<string> = this.processIfStatement(statement as ts.IfStatement);
+                    ifResult.forEach((e : string) => { changedVars.add(e); });
                     break;
                 case ts.SyntaxKind.ReturnStatement:
                     this.processReturnStatement(statement as ts.ReturnStatement);
