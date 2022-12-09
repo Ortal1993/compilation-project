@@ -181,18 +181,16 @@ class Analyzer {
         let trueBranchSymbolTable: Map<string, number>;
         let falseBranchSymbolTable: Map<string, number>;
 
-        let trueBranchNodeId: number = this.graph.addVertex(VertexType.Branch, {type: true});
-        let falseBranchNodeId: number = this.graph.addVertex(VertexType.Branch, {type: false});
         let mergeNodeId: number = this.graph.addVertex(VertexType.Merge, {ifId: ifNodeId});
 
-        this.nextControl(trueBranchNodeId);
         changedVars = this.processIfBlock(ifStatement.thenStatement);
         changedVars.forEach((e : string) => { allChangedVars.add(e); });
         trueBranchSymbolTable = this.symbolTable.getCopy(changedVars);
+
+        let lastTrueBranchControlVertex: number = this.getLastControlVertex(ifNodeId);
         this.nextControl(mergeNodeId);
 
         this.controlVertex = ifNodeId;
-        this.nextControl(falseBranchNodeId);
 
         if (ifStatement.elseStatement === undefined) {
             falseBranchSymbolTable = new Map<string, number>();
@@ -210,20 +208,40 @@ class Analyzer {
             falseBranchSymbolTable = this.symbolTable.getCopy(changedVars);
         }
 
+        let lastFalseBranchControlVertex: number = this.getLastControlVertex(ifNodeId);
         this.nextControl(mergeNodeId);
 
-        this.createPhiVertices(symbolTableCopy, trueBranchSymbolTable, falseBranchSymbolTable, ifNodeId);
+        this.createPhiVertices(symbolTableCopy, trueBranchSymbolTable, falseBranchSymbolTable,
+                               mergeNodeId, lastTrueBranchControlVertex, lastFalseBranchControlVertex);
 
         return allChangedVars;
+    }
+
+    private getLastControlVertex(ifNodeId: number) : number {
+        // when there are no control vertices inside the branch block, we want to create a dummy
+        // node for the matching phi vertices.
+        if (ifNodeId === this.controlVertex) {
+            let dummyNodeId: number = this.graph.addVertex(VertexType.Dummy, {});
+            this.nextControl(dummyNodeId);
+            return dummyNodeId;
+        }
+        return this.controlVertex;
     }
 
     private createPhiVertices(symbolTableCopy: Map<string, number>,
                               trueBranchSymbolTable: Map<string, number>,
                               falseBranchSymbolTable: Map<string, number>,
-                              ifNodeId: number): void {
+                              mergeNodeId: number,
+                              lastTrueBranchControlVertex: number,
+                              lastFalseBranchControlVertex: number): void {
         symbolTableCopy.forEach((nodeId: number, varName: string) => {
             let trueBranchNodeId = trueBranchSymbolTable.get(varName);
             let falseBranchNodeId = falseBranchSymbolTable.get(varName);
+
+            let phiEdgesLabels = {
+                true: "from " + String(lastTrueBranchControlVertex),
+                false: "from " + String(lastFalseBranchControlVertex)
+            };
 
             if (!(trueBranchNodeId) && !(falseBranchNodeId)) {
                 // TODO: assert (remove after testing)
@@ -232,18 +250,18 @@ class Analyzer {
                 }
             }
             else {
-                let phiNodeId: number = this.graph.addVertex(VertexType.Phi, {ifId: ifNodeId});
+                let phiNodeId: number = this.graph.addVertex(VertexType.Phi, {mergeId: mergeNodeId});
                 if (trueBranchNodeId && falseBranchNodeId) {
-                    this.graph.addEdge(trueBranchNodeId, phiNodeId, "true-assign");
-                    this.graph.addEdge(falseBranchNodeId, phiNodeId, "false-assign");
+                    this.graph.addEdge(trueBranchNodeId, phiNodeId, phiEdgesLabels.true);
+                    this.graph.addEdge(falseBranchNodeId, phiNodeId, phiEdgesLabels.false);
                 }
                 else if (trueBranchNodeId) {
-                    this.graph.addEdge(trueBranchNodeId, phiNodeId, "true-assign");
-                    this.graph.addEdge(nodeId, phiNodeId, "false-assign");
+                    this.graph.addEdge(trueBranchNodeId, phiNodeId, phiEdgesLabels.true);
+                    this.graph.addEdge(nodeId, phiNodeId, phiEdgesLabels.false);
                 }
                 else if (falseBranchNodeId) {
-                    this.graph.addEdge(falseBranchNodeId, phiNodeId, "false-assign");
-                    this.graph.addEdge(nodeId, phiNodeId, "true-assign");
+                    this.graph.addEdge(falseBranchNodeId, phiNodeId, phiEdgesLabels.false);
+                    this.graph.addEdge(nodeId, phiNodeId, phiEdgesLabels.true);
                 }
                 else {
                     // TODO: assert (remove after testing)

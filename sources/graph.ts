@@ -43,7 +43,7 @@ export class Graph {
                 newVertex = new vertex.IfVertex();
                 break;
             case VertexType.Phi:
-                newVertex = new vertex.PhiVertex(properties["ifId"]);
+                newVertex = new vertex.PhiVertex(properties["mergeId"]);
                 break;
             case VertexType.Start:
                 newVertex = new vertex.StartVertex(properties["name"]);
@@ -51,8 +51,8 @@ export class Graph {
             case VertexType.Call:
                 newVertex = new vertex.CallVertex();
                 break;
-            case VertexType.Branch:
-                newVertex = new vertex.BranchVertex(properties["type"]);
+            case VertexType.Dummy:
+                newVertex = new vertex.DummyVertex();
                 break;
             case VertexType.Merge:
                 newVertex = new vertex.MergeVertex(properties["ifId"]);

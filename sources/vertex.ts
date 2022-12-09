@@ -164,15 +164,15 @@ export class IfVertex extends ControlVertex {
 }
 
 export class PhiVertex extends DataVertex {
-    public ifId: number;
+    public mergeId: number;
 
-    constructor(_ifId: number) {
+    constructor(_mergeId: number) {
         super();
-        this.ifId = _ifId;
+        this.mergeId = _mergeId;
     }
 
     public getLabel(): string {
-        return this.getLabelPrefix() + "phi " + " (if: " + String(this.ifId) + ")";
+        return this.getLabelPrefix() + "phi " + " (merge: " + String(this.mergeId) + ")";
     }
 }
 
@@ -199,16 +199,13 @@ export class CallVertex extends ControlVertex {
     }
 }
 
-export class BranchVertex extends ControlVertex {
-    private type: boolean;
-
-    constructor(_type: boolean) {
+export class DummyVertex extends ControlVertex {
+    constructor() {
         super();
-        this.type = _type;
     }
 
     public getLabel(): string {
-        return this.getLabelPrefix() + String(this.type);
+        return this.getLabelPrefix() + "Dummy";
     }
 }
 
