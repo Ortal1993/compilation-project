@@ -2,7 +2,7 @@ import * as ts from "typescript";
 import { Graph } from "./graph";
 import { SymbolTable } from "./symbolTable";
 import { ConstTable } from "./constTable";
-import { VertexType, BinaryOperation, UnaryOperation } from "./types";
+import { NodeId, VertexType, BinaryOperation, UnaryOperation } from "./types";
 import * as vertex from "./vertex";
 
 class Analyzer {
@@ -11,8 +11,8 @@ class Analyzer {
     private graph: Graph;
     private symbolTable: SymbolTable;
     private constTable: ConstTable;
-    private controlVertex: number;
-    private functionsStack: Array<number>; //number - nodeId of start vertex
+    private controlVertex: NodeId;
+    private functionsStack: Array<NodeId>;
     private currentBranchType: boolean;
 
     public constructor( _output: string, _sourceName: string) {
@@ -22,7 +22,7 @@ class Analyzer {
         this.symbolTable = new SymbolTable();
         this.constTable = new ConstTable(this.graph);
         this.controlVertex = 0;
-        this.functionsStack = new Array<number>();
+        this.functionsStack = new Array<NodeId>();
         this.currentBranchType = false;
     }
 
@@ -59,7 +59,7 @@ class Analyzer {
         this.symbolTable.removeCurrentScope();
     }
 
-    private nextControl(nextControlId: number) {
+    private nextControl(nextControlId: NodeId) {
         let currentControlVertex: vertex.Vertex = this.graph.getVertexById(this.controlVertex);
         if (!(currentControlVertex instanceof vertex.ReturnVertex)) {
             let edgeLabel: string = currentControlVertex instanceof vertex.IfVertex ?
@@ -99,11 +99,11 @@ class Analyzer {
     }
 
     private processPostponedFunctionStatements(postponedFunctionStatements: Array<ts.FunctionDeclaration>): void {
-        let prevControlVertex: number = this.controlVertex;
+        let prevControlVertex: NodeId = this.controlVertex;
 
         postponedFunctionStatements.forEach((funcDeclaration: ts.FunctionDeclaration) => {
             let funcName: string = (funcDeclaration.name as any).escapedText;
-            let funcStartNodeId: number = this.symbolTable.getIdByName(funcName);
+            let funcStartNodeId: NodeId = this.symbolTable.getIdByName(funcName);
             this.controlVertex = funcStartNodeId;
 
             this.symbolTable.addNewScope();
@@ -111,7 +111,7 @@ class Analyzer {
 
             funcDeclaration.parameters.forEach((parameter: ts.ParameterDeclaration, position: number) => {
                 let parameterName: string = (parameter.name as any).escapedText;
-                let parameterNodeId: number = this.graph.addVertex(VertexType.Parameter,
+                let parameterNodeId: NodeId = this.graph.addVertex(VertexType.Parameter,
                                                                    {pos: position + 1, funcId: funcStartNodeId});
                 this.symbolTable.addSymbol(parameterName, parameterNodeId, false, true);
             });
@@ -127,7 +127,7 @@ class Analyzer {
 
     private processFunctionDeclaration(funcDeclaration: ts.FunctionDeclaration): void {
         let funcName: string = (funcDeclaration.name as any).escapedText;
-        let funcStartNodeId: number = this.graph.addVertex(VertexType.Start, {name: funcName});
+        let funcStartNodeId: NodeId = this.graph.addVertex(VertexType.Start, {name: funcName});
         this.symbolTable.addSymbol(funcName, funcStartNodeId, true);
     }
 
@@ -143,7 +143,7 @@ class Analyzer {
         });
     }
 
-    private processExpressionStatement(expStatement: ts.ExpressionStatement): number {
+    private processExpressionStatement(expStatement: ts.ExpressionStatement): NodeId {
         switch (expStatement.expression.kind) {
             case ts.SyntaxKind.BinaryExpression:
                 return this.processBinaryExpression(expStatement.expression as ts.BinaryExpression);
@@ -154,45 +154,45 @@ class Analyzer {
         }
     }
 
-    private processCallExpression(callExpression: ts.CallExpression): number {
-        let callNodeId: number = this.graph.addVertex(VertexType.Call);
+    private processCallExpression(callExpression: ts.CallExpression): NodeId {
+        let callNodeId: NodeId = this.graph.addVertex(VertexType.Call);
 
         this.nextControl(callNodeId);
 
         callExpression.arguments.forEach((argument, pos) => {
-            let argumentNodeId: number = this.processExpression(argument);
+            let argumentNodeId: NodeId = this.processExpression(argument);
             this.graph.addEdge(argumentNodeId, callNodeId, "pos: " + String(pos + 1));
         });
 
-        let startNodeId: number = this.processExpression(callExpression.expression);//callExpression.expression - name of function
+        let startNodeId: NodeId = this.processExpression(callExpression.expression);//callExpression.expression - name of function
         this.graph.addEdge(callNodeId, startNodeId, "call");
 
         return callNodeId;
     }
 
     private processIfStatement(ifStatement: ts.IfStatement): Set<string> {
-        let ifNodeId: number = this.graph.addVertex(VertexType.If);
+        let ifNodeId: NodeId = this.graph.addVertex(VertexType.If);
 
         this.nextControl(ifNodeId);
 
-        let expNodeId: number = this.processExpression(ifStatement.expression);
+        let expNodeId: NodeId = this.processExpression(ifStatement.expression);
         this.graph.addEdge(expNodeId, ifNodeId, "cond");
 
-        let symbolTableCopy: Map<string, number> = this.symbolTable.getCopy();
+        let symbolTableCopy: Map<string, NodeId> = this.symbolTable.getCopy();
 
         let allChangedVars: Set<string> = new Set<string>();
         let changedVars: Set<string>;
-        let trueBranchSymbolTable: Map<string, number>;
-        let falseBranchSymbolTable: Map<string, number>;
+        let trueBranchSymbolTable: Map<string, NodeId>;
+        let falseBranchSymbolTable: Map<string, NodeId>;
 
-        let mergeNodeId: number = this.graph.addVertex(VertexType.Merge, {ifId: ifNodeId});
+        let mergeNodeId: NodeId = this.graph.addVertex(VertexType.Merge, {ifId: ifNodeId});
 
         this.currentBranchType = true;
         changedVars = this.processIfBlock(ifStatement.thenStatement);
         changedVars.forEach((e : string) => { allChangedVars.add(e); });
         trueBranchSymbolTable = this.symbolTable.getCopy(changedVars);
 
-        let lastTrueBranchControlVertex: number = this.getLastControlVertex(ifNodeId);
+        let lastTrueBranchControlVertex: NodeId = this.getLastControlVertex(ifNodeId);
         this.nextControl(mergeNodeId);
 
         this.controlVertex = ifNodeId;
@@ -200,7 +200,7 @@ class Analyzer {
         this.currentBranchType = false;
 
         if (ifStatement.elseStatement === undefined) {
-            falseBranchSymbolTable = new Map<string, number>();
+            falseBranchSymbolTable = new Map<string, NodeId>();
         }
         else {
             // In case we have else-if then ifStatement.elseStatement is a ifStatement itself.
@@ -215,7 +215,7 @@ class Analyzer {
             falseBranchSymbolTable = this.symbolTable.getCopy(changedVars);
         }
 
-        let lastFalseBranchControlVertex: number = this.getLastControlVertex(ifNodeId);
+        let lastFalseBranchControlVertex: NodeId = this.getLastControlVertex(ifNodeId);
         this.nextControl(mergeNodeId);
 
         this.createPhiVertices(symbolTableCopy, trueBranchSymbolTable, falseBranchSymbolTable,
@@ -224,24 +224,24 @@ class Analyzer {
         return allChangedVars;
     }
 
-    private getLastControlVertex(ifNodeId: number) : number {
+    private getLastControlVertex(ifNodeId: NodeId) : NodeId {
         // when there are no control vertices inside the branch block, we want to create a dummy
         // node for the matching phi vertices.
         if (ifNodeId === this.controlVertex) {
-            let dummyNodeId: number = this.graph.addVertex(VertexType.Dummy, {});
+            let dummyNodeId: NodeId = this.graph.addVertex(VertexType.Dummy, {});
             this.nextControl(dummyNodeId);
             return dummyNodeId;
         }
         return this.controlVertex;
     }
 
-    private createPhiVertices(symbolTableCopy: Map<string, number>,
-                              trueBranchSymbolTable: Map<string, number>,
-                              falseBranchSymbolTable: Map<string, number>,
-                              mergeNodeId: number,
-                              lastTrueBranchControlVertex: number,
-                              lastFalseBranchControlVertex: number): void {
-        symbolTableCopy.forEach((nodeId: number, varName: string) => {
+    private createPhiVertices(symbolTableCopy: Map<string, NodeId>,
+                              trueBranchSymbolTable: Map<string, NodeId>,
+                              falseBranchSymbolTable: Map<string, NodeId>,
+                              mergeNodeId: NodeId,
+                              lastTrueBranchControlVertex: NodeId,
+                              lastFalseBranchControlVertex: NodeId): void {
+        symbolTableCopy.forEach((nodeId: NodeId, varName: string) => {
             let trueBranchNodeId = trueBranchSymbolTable.get(varName);
             let falseBranchNodeId = falseBranchSymbolTable.get(varName);
 
@@ -257,7 +257,7 @@ class Analyzer {
                 }
             }
             else {
-                let phiNodeId: number = this.graph.addVertex(VertexType.Phi, {mergeId: mergeNodeId});
+                let phiNodeId: NodeId = this.graph.addVertex(VertexType.Phi, {mergeId: mergeNodeId});
                 if (trueBranchNodeId && falseBranchNodeId) {
                     this.graph.addEdge(trueBranchNodeId, phiNodeId, phiEdgesLabels.true);
                     this.graph.addEdge(falseBranchNodeId, phiNodeId, phiEdgesLabels.false);
@@ -288,7 +288,7 @@ class Analyzer {
                     this.processVariableStatement(statement as ts.VariableStatement);
                     break;
                 case ts.SyntaxKind.ExpressionStatement:
-                    let expressionResult: number = this.processExpressionStatement(statement as ts.ExpressionStatement);
+                    let expressionResult: NodeId = this.processExpressionStatement(statement as ts.ExpressionStatement);
                     if ((statement as ts.ExpressionStatement).expression.kind === ts.SyntaxKind.BinaryExpression) {
                         changedVars.add(this.symbolTable.getNameById(expressionResult));
                     }
@@ -309,12 +309,12 @@ class Analyzer {
     }
 
     private processReturnStatement(retStatement: ts.ReturnStatement): void {
-        let currentFuncNodeId: number = this.functionsStack[0];
-        let returnNodeId: number = this.graph.addVertex(VertexType.Return, {funcId: currentFuncNodeId});
+        let currentFuncNodeId: NodeId = this.functionsStack[0];
+        let returnNodeId: NodeId = this.graph.addVertex(VertexType.Return, {funcId: currentFuncNodeId});
         this.nextControl(returnNodeId);
 
         if (retStatement.expression !== undefined) {
-            let expNodeId: number = this.processExpression(retStatement.expression);
+            let expNodeId: NodeId = this.processExpression(retStatement.expression);
             this.graph.addEdge(expNodeId, returnNodeId, "value")
         }
     }
@@ -335,7 +335,7 @@ class Analyzer {
         let varName: string = (varDecl.name as any).escapedText;
 
         if (varDecl.initializer !== undefined) {
-            let expNodeId: number = this.processExpression(varDecl.initializer as ts.Expression);
+            let expNodeId: NodeId = this.processExpression(varDecl.initializer as ts.Expression);
             this.symbolTable.addSymbol(varName, expNodeId, false, true);
         }
         else {
@@ -344,8 +344,8 @@ class Analyzer {
         
     }
 
-    private processExpression(expression: ts.Expression): number {
-        let expNodeId: number;
+    private processExpression(expression: ts.Expression): NodeId {
+        let expNodeId: NodeId;
         switch (expression.kind) {
             case ts.SyntaxKind.NumericLiteral:
                 expNodeId = this.processNumericLiteral(expression as ts.NumericLiteral);
@@ -380,26 +380,26 @@ class Analyzer {
         return expNodeId;
     }
 
-    private processNumericLiteral(numLiteral: ts.NumericLiteral): number {
+    private processNumericLiteral(numLiteral: ts.NumericLiteral): NodeId {
         let value: number = Number(numLiteral.text);
 
-        return this.constTable.getId(value);
+        return this.constTable.getNodeId(value);
     }
 
-    private processStringLiteral(strLiteral: ts.StringLiteral): number {
-        return this.constTable.getId(strLiteral.text);
+    private processStringLiteral(strLiteral: ts.StringLiteral): NodeId {
+        return this.constTable.getNodeId(strLiteral.text);
     }
 
-    private processTrueLiteral(trueLiteral: ts.TrueLiteral): number {
-        return this.constTable.getId(true);
+    private processTrueLiteral(trueLiteral: ts.TrueLiteral): NodeId {
+        return this.constTable.getNodeId(true);
     }
 
-    private processFalseLiteral(falseLiteral: ts.FalseLiteral): number {
-        return this.constTable.getId(false);
+    private processFalseLiteral(falseLiteral: ts.FalseLiteral): NodeId {
+        return this.constTable.getNodeId(false);
     }
 
-    private processPrefixUnaryExpression(prefixUnaryExpression: ts.PrefixUnaryExpression): number {
-        let expNodeId: number = this.processExpression(prefixUnaryExpression.operand as ts.Expression);
+    private processPrefixUnaryExpression(prefixUnaryExpression: ts.PrefixUnaryExpression): NodeId {
+        let expNodeId: NodeId = this.processExpression(prefixUnaryExpression.operand as ts.Expression);
         let unaryOperation: UnaryOperation;
         switch(prefixUnaryExpression.operator){
             case ts.SyntaxKind.PlusToken:
@@ -414,12 +414,12 @@ class Analyzer {
             default:
                 throw new Error(`not implemented`);
         }
-        let operationNodeId: number = this.graph.addVertex(VertexType.UnaryOperation, {operation: unaryOperation});
+        let operationNodeId: NodeId = this.graph.addVertex(VertexType.UnaryOperation, {operation: unaryOperation});
         this.graph.addEdge(expNodeId, operationNodeId, "prefix");
         return operationNodeId;
     }
 
-    private processBinaryExpression(binExpression: ts.BinaryExpression): number {
+    private processBinaryExpression(binExpression: ts.BinaryExpression): NodeId {
         let binaryOperation: BinaryOperation;
         let isAssignOperation: boolean = false;
 
@@ -474,7 +474,7 @@ class Analyzer {
                 throw new Error(`not implemented`);
         }
 
-        let rightNodeId: number = this.processExpression(binExpression.right);
+        let rightNodeId: NodeId = this.processExpression(binExpression.right);
         if (isAssignOperation) {
             // for cases a variable that is already defined is being re-assigned
             let varName: string = (binExpression.left as any).escapedText;
@@ -482,20 +482,20 @@ class Analyzer {
             return rightNodeId;
         }
         else {
-            let leftNodeId: number = this.processExpression(binExpression.left);
-            let operationNodeId: number = this.graph.addVertex(VertexType.BinaryOperation, {operation: binaryOperation});
+            let leftNodeId: NodeId = this.processExpression(binExpression.left);
+            let operationNodeId: NodeId = this.graph.addVertex(VertexType.BinaryOperation, {operation: binaryOperation});
             this.graph.addEdge(rightNodeId, operationNodeId, "right");
             this.graph.addEdge(leftNodeId, operationNodeId, "left");
             return operationNodeId;
         }
     }
 
-    private processParenthesizedExpression(parenthesizedExpression: ts.ParenthesizedExpression): number {
+    private processParenthesizedExpression(parenthesizedExpression: ts.ParenthesizedExpression): NodeId {
         return this.processExpression(parenthesizedExpression.expression);
     }
 
     //for cases we use the identifier's value
-    private processIdentifierExpression(identifierExpression: ts.Identifier): number {
+    private processIdentifierExpression(identifierExpression: ts.Identifier): NodeId {
         let varName: string = Analyzer.getVarName(identifierExpression);
         return this.symbolTable.getIdByName(varName);
     }

@@ -1,3 +1,5 @@
+export type NodeId = number;
+
 export enum BinaryOperation {
     Add,
     Sub,

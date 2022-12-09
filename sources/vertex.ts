@@ -1,14 +1,14 @@
-import { BinaryOperation, UnaryOperation } from "./types";
+import { NodeId, BinaryOperation, UnaryOperation } from "./types";
 
 export abstract class Vertex {
-    private static next_id: number = 0;
-    public id: number;
+    private static next_id: NodeId = 0;
+    public id: NodeId;
 
     constructor() {
         this.id = Vertex.next_id++;
     }
 
-    public static getCount(): number {
+    public static getCount(): NodeId {
         return Vertex.next_id;
     }
 
@@ -46,9 +46,9 @@ export class ConstVertex extends DataVertex {
 
 export class ParameterVertex extends DataVertex {
     public pos: number;
-    public funcId: number;
+    public funcId: NodeId;
 
-    constructor(_pos: number, _funcId: number) {
+    constructor(_pos: number, _funcId: NodeId) {
         super();
         this.pos = _pos;
         this.funcId = _funcId;
@@ -164,9 +164,9 @@ export class IfVertex extends ControlVertex {
 }
 
 export class PhiVertex extends DataVertex {
-    public mergeId: number;
+    public mergeId: NodeId;
 
-    constructor(_mergeId: number) {
+    constructor(_mergeId: NodeId) {
         super();
         this.mergeId = _mergeId;
     }
@@ -210,9 +210,9 @@ export class DummyVertex extends ControlVertex {
 }
 
 export class MergeVertex extends ControlVertex {
-    public ifId: number;
+    public ifId: NodeId;
 
-    constructor(_ifId: number) {
+    constructor(_ifId: NodeId) {
         super();
         this.ifId = _ifId;
     }
@@ -223,9 +223,9 @@ export class MergeVertex extends ControlVertex {
 }
 
 export class ReturnVertex extends ControlVertex {
-    public funcId: number;
+    public funcId: NodeId;
 
-    constructor(_funcId: number) {
+    constructor(_funcId: NodeId) {
         super();
         this.funcId = _funcId;
     }

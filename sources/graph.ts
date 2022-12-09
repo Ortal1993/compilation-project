@@ -1,22 +1,22 @@
-import { VertexType, BinaryOperation, UnaryOperation } from "./types";
+import { NodeId, VertexType, BinaryOperation, UnaryOperation } from "./types";
 import * as vertex from "./vertex";
 
 export class Graph {
     private edges: Edge[];
-    private vertices: Map<number, vertex.Vertex>;
+    private vertices: Map<NodeId, vertex.Vertex>;
 
     public constructor() {
         this.edges = [];
-        this.vertices = new Map<number, vertex.Vertex>();
+        this.vertices = new Map<NodeId, vertex.Vertex>();
     }
 
-    private checkVertexExists(id: number): void {
+    private checkVertexExists(id: NodeId): void {
         if (!this.vertices.has(id)) {
             throw new Error(`Vertex with id ${id} does not exist`);
         }
     }
 
-    public addEdge(srcId: number, dstId: number, type: string): void {
+    public addEdge(srcId: NodeId, dstId: NodeId, type: string): void {
         this.checkVertexExists(srcId);
         this.checkVertexExists(dstId);
 
@@ -24,7 +24,7 @@ export class Graph {
         this.edges.push(newEdge);
     }
 
-    public addVertex(vertexType: VertexType, properties: Object = {}): number {
+    public addVertex(vertexType: VertexType, properties: Object = {}): NodeId {
         let newVertex: vertex.Vertex;
         switch (vertexType) {
             case VertexType.Const:
@@ -67,7 +67,7 @@ export class Graph {
         return newVertex.id;
     }
 
-    public getVertexById(nodeId: number): vertex.Vertex {
+    public getVertexById(nodeId: NodeId): vertex.Vertex {
         if (!this.vertices.has(nodeId)) {
             throw new Error(`Vertex with node id ${nodeId} does not exist`);
         }
@@ -105,11 +105,11 @@ export class Graph {
 }
 
 class Edge {
-    public srcId: number;
-    public dstId: number;
+    public srcId: NodeId;
+    public dstId: NodeId;
     public type: string;
 
-    public constructor(_srcId: number, _dstId: number, _type: string) {
+    public constructor(_srcId: NodeId, _dstId: NodeId, _type: string) {
         this.srcId = _srcId;
         this.dstId = _dstId;
         this.type = _type;
