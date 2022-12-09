@@ -13,6 +13,7 @@ class Analyzer {
     private constTable: ConstTable;
     private controlVertex: number;
     private functionsStack: Array<number>; //number - nodeId of start vertex
+    private currentBranchType: boolean;
 
     public constructor( _output: string, _sourceName: string) {
         this.output = _output;
@@ -22,6 +23,7 @@ class Analyzer {
         this.constTable = new ConstTable(this.graph);
         this.controlVertex = 0;
         this.functionsStack = new Array<number>();
+        this.currentBranchType = false;
     }
 
     public run() {
@@ -60,7 +62,9 @@ class Analyzer {
     private nextControl(nextControlId: number) {
         let currentControlVertex: vertex.Vertex = this.graph.getVertexById(this.controlVertex);
         if (!(currentControlVertex instanceof vertex.ReturnVertex)) {
-            this.graph.addEdge(this.controlVertex, nextControlId, "control");
+            let edgeLabel: string = currentControlVertex instanceof vertex.IfVertex ?
+                                    String(this.currentBranchType) + "-control" : "control";
+            this.graph.addEdge(this.controlVertex, nextControlId, edgeLabel);
         }
         this.controlVertex = nextControlId;
     }
@@ -183,6 +187,7 @@ class Analyzer {
 
         let mergeNodeId: number = this.graph.addVertex(VertexType.Merge, {ifId: ifNodeId});
 
+        this.currentBranchType = true;
         changedVars = this.processIfBlock(ifStatement.thenStatement);
         changedVars.forEach((e : string) => { allChangedVars.add(e); });
         trueBranchSymbolTable = this.symbolTable.getCopy(changedVars);
@@ -191,6 +196,8 @@ class Analyzer {
         this.nextControl(mergeNodeId);
 
         this.controlVertex = ifNodeId;
+
+        this.currentBranchType = false;
 
         if (ifStatement.elseStatement === undefined) {
             falseBranchSymbolTable = new Map<string, number>();

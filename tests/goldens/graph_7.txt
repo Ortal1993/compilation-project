@@ -16,7 +16,7 @@ digraph G {
 	14 [ label="14 | +" shape="rectangle" ];
 	15 [ label="15 | param (1): (function: 2)" shape="rectangle" ];
 	16 [ label="16 | param (2): (function: 2)" shape="rectangle" ];
-	17 [ label="17 | return (function: 1)" shape="rectangle" ];
+	17 [ label="17 | return (function: 2)" shape="rectangle" ];
 	18 [ label="18 | -" shape="rectangle" ];
 	0 -> 4 [ label="control" ];
 	3 -> 4 [ label="pos: 1" ];

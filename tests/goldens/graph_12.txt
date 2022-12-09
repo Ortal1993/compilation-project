@@ -1,0 +1,33 @@
+digraph G {
+	0 [ label="0 | start (function: __entryPoint__)" shape="rectangle" ];
+	1 [ label="1 | 0" shape="rectangle" ];
+	2 [ label="2 | if" shape="rectangle" ];
+	3 [ label="3 | true" shape="rectangle" ];
+	4 [ label="4 | merge (if: 2)" shape="rectangle" ];
+	5 [ label="5 | 1" shape="rectangle" ];
+	6 [ label="6 | Dummy" shape="rectangle" ];
+	7 [ label="7 | if" shape="rectangle" ];
+	8 [ label="8 | false" shape="rectangle" ];
+	9 [ label="9 | merge (if: 7)" shape="rectangle" ];
+	10 [ label="10 | 2" shape="rectangle" ];
+	11 [ label="11 | Dummy" shape="rectangle" ];
+	12 [ label="12 | 3" shape="rectangle" ];
+	13 [ label="13 | Dummy" shape="rectangle" ];
+	14 [ label="14 | phi  (merge: 9)" shape="rectangle" ];
+	15 [ label="15 | phi  (merge: 4)" shape="rectangle" ];
+	0 -> 2 [ label="control" ];
+	3 -> 2 [ label="cond" ];
+	2 -> 6 [ label="true-control" ];
+	6 -> 4 [ label="control" ];
+	2 -> 7 [ label="false-control" ];
+	8 -> 7 [ label="cond" ];
+	7 -> 11 [ label="true-control" ];
+	11 -> 9 [ label="control" ];
+	7 -> 13 [ label="false-control" ];
+	13 -> 9 [ label="control" ];
+	10 -> 14 [ label="from 11" ];
+	12 -> 14 [ label="from 13" ];
+	9 -> 4 [ label="control" ];
+	5 -> 15 [ label="from 6" ];
+	14 -> 15 [ label="from 9" ];
+}
