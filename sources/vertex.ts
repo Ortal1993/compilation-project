@@ -55,7 +55,7 @@ export class ParameterVertex extends DataVertex {
     }
 
     public getLabel(): string {
-        return this.getLabelPrefix() + "param (" + String(this.pos) + "): (function: " + String(this.funcId) + ")";
+        return this.getLabelPrefix() + "param (" + String(this.pos) + "): (" + String(this.funcId) + ")";
     }
 }
 
@@ -182,7 +182,7 @@ export class PhiVertex extends DataVertex {
     }
 
     public getLabel(): string {
-        return this.getLabelPrefix() + "phi " + " (merge: " + String(this.mergeId) + ")";
+        return this.getLabelPrefix() + "phi " + " (" + String(this.mergeId) + ")";
     }
 }
 
@@ -195,7 +195,7 @@ export class StartVertex extends ControlVertex {
     }
 
     public getLabel(): string {
-        return this.getLabelPrefix() + "start (function: " + this.name + ")";
+        return this.getLabelPrefix() + "start (" + this.name + ")";
     }
 }
 
@@ -241,6 +241,6 @@ export class ReturnVertex extends ControlVertex {
     }
 
     public getLabel(): string {
-        return this.getLabelPrefix() + "return (function: " + String(this.funcId) + ")";
+        return this.getLabelPrefix() + "return (" + String(this.funcId) + ")";
     }
 }

@@ -1,7 +1,7 @@
 digraph G {
-	0 [ label="0 | start (function: __entryPoint__)" shape="rectangle" ];
-	1 [ label="1 | start (function: add)" shape="rectangle" ];
-	2 [ label="2 | start (function: sub)" shape="rectangle" ];
+	0 [ label="0 | start (__entryPoint__)" shape="rectangle" ];
+	1 [ label="1 | start (add)" shape="rectangle" ];
+	2 [ label="2 | start (sub)" shape="rectangle" ];
 	3 [ label="3 | 10" shape="rectangle" ];
 	4 [ label="4 | call" shape="rectangle" ];
 	5 [ label="5 | 20" shape="rectangle" ];
@@ -10,13 +10,13 @@ digraph G {
 	8 [ label="8 | 50" shape="rectangle" ];
 	9 [ label="9 | 1" shape="rectangle" ];
 	10 [ label="10 | +" shape="rectangle" ];
-	11 [ label="11 | param (1): (function: 1)" shape="rectangle" ];
-	12 [ label="12 | param (2): (function: 1)" shape="rectangle" ];
-	13 [ label="13 | return (function: 1)" shape="rectangle" ];
+	11 [ label="11 | param (1): (1)" shape="rectangle" ];
+	12 [ label="12 | param (2): (1)" shape="rectangle" ];
+	13 [ label="13 | return (1)" shape="rectangle" ];
 	14 [ label="14 | +" shape="rectangle" ];
-	15 [ label="15 | param (1): (function: 2)" shape="rectangle" ];
-	16 [ label="16 | param (2): (function: 2)" shape="rectangle" ];
-	17 [ label="17 | return (function: 2)" shape="rectangle" ];
+	15 [ label="15 | param (1): (2)" shape="rectangle" ];
+	16 [ label="16 | param (2): (2)" shape="rectangle" ];
+	17 [ label="17 | return (2)" shape="rectangle" ];
 	18 [ label="18 | -" shape="rectangle" ];
 	0 -> 4 [ label="control" ];
 	3 -> 4 [ label="pos: 1" ];

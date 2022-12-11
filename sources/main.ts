@@ -66,8 +66,9 @@ class Analyzer {
     private nextControl(nextControlId: NodeId) {
         let currentControlVertex: vertex.Vertex = this.graph.getVertexById(this.controlVertex);
         if (!(currentControlVertex instanceof vertex.ReturnVertex)) {
-            let edgeLabel: string = currentControlVertex instanceof vertex.IfVertex ?
-                                    String(this.currentBranchType) + "-control" : "control";
+            let isBranchVertex = currentControlVertex instanceof vertex.IfVertex ||
+                                 currentControlVertex instanceof vertex.WhileVertex;
+            let edgeLabel: string = isBranchVertex ? String(this.currentBranchType) + "-control" : "control";
             this.graph.addEdge(this.controlVertex, nextControlId, edgeLabel);
         }
         this.controlVertex = nextControlId;
@@ -197,7 +198,7 @@ class Analyzer {
         });
 
         this.processIfBlock(whileStatement.statement);
-        let lastBlockControlVertex: NodeId = this.controlVertex;
+        let lastBlockControlVertex: NodeId = this.getLastControlVertex(whileNodeId);
 
         let changedVars: Map<string, NodeId> = new Map<string, NodeId>();
         symbolTableCopy.forEach((nodeId: NodeId, varName: string) => {
@@ -242,7 +243,7 @@ class Analyzer {
         let trueBranchSymbolTable: Map<string, NodeId>;
         let falseBranchSymbolTable: Map<string, NodeId>;
 
-        let mergeNodeId: NodeId = this.graph.addVertex(VertexType.Merge, {ifId: ifNodeId});
+        let mergeNodeId: NodeId = this.graph.addVertex(VertexType.Merge, {branchOriginId: ifNodeId});
 
         this.currentBranchType = true;
         changedVars = this.processIfBlock(ifStatement.thenStatement);
@@ -281,10 +282,10 @@ class Analyzer {
         return allChangedVars;
     }
 
-    private getLastControlVertex(ifNodeId: NodeId) : NodeId {
+    private getLastControlVertex(StartBlockNodeId: NodeId) : NodeId {
         // when there are no control vertices inside the branch block, we want to create a dummy
         // node for the matching phi vertices.
-        if (ifNodeId === this.controlVertex) {
+        if (StartBlockNodeId === this.controlVertex) {
             let dummyNodeId: NodeId = this.graph.addVertex(VertexType.Dummy, {});
             this.nextControl(dummyNodeId);
             return dummyNodeId;
