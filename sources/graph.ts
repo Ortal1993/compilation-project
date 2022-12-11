@@ -26,11 +26,11 @@ export class Graph {
         }
     }
 
-    public addEdge(srcId: NodeId, dstId: NodeId, label: string): void {
+    public addEdge(srcId: NodeId, dstId: NodeId, label: string, type: EdgeType = EdgeType.Standart): void {
         this.checkVertexId(srcId);
         this.checkVertexId(dstId);
 
-        let newEdge: Edge = new Edge(srcId, dstId, label);
+        let newEdge: Edge = new Edge(srcId, dstId, label, type);
         this.edges.push(newEdge);
     }
 
@@ -114,7 +114,8 @@ export class Graph {
                 content += `\t${vertex.id} [ label="${vertex.getLabel()}" shape="rectangle" ];\n`
             });
             this.edges.forEach(edge => {
-                content += `\t${edge.srcId} -> ${edge.dstId} [ label="${edge.label}" ];\n`
+                let style = (edge.type == EdgeType.InterFunction) ? 'dashed' : 'solid'
+                content += `\t${edge.srcId} -> ${edge.dstId} [ label="${edge.label}", style="${style}" ];\n`
             });
             content += "}\n";
         }
@@ -132,14 +133,21 @@ export class Graph {
     }
 }
 
+export enum EdgeType {
+    Standart, // default. maybe later on will be splitted to control\data?
+    InterFunction
+}
+
 export class Edge {
     public srcId: NodeId;
     public dstId: NodeId;
     public label: string;
+    public type: EdgeType;
 
-    public constructor(_srcId: NodeId, _dstId: NodeId, _label: string) {
+    public constructor(_srcId: NodeId, _dstId: NodeId, _label: string, _type: EdgeType) {
         this.srcId = _srcId;
         this.dstId = _dstId;
         this.label = _label;
+        this.type = _type;
     }
 }
