@@ -180,12 +180,10 @@ class Analyzer {
 
     private processWhileStatement(whileStatement: ts.WhileStatement): void {
         let preStatementControlVertex: NodeId = this.controlVertex;
-        let expNodeId: NodeId = this.processExpression(whileStatement.expression);
         let whileNodeId: NodeId = this.graph.addVertex(VertexType.While)
         let mergeNodeId: NodeId = this.graph.addVertex(VertexType.Merge, {branchOriginId: whileNodeId});
         this.nextControl(mergeNodeId);
         this.nextControl(whileNodeId);
-        this.graph.addEdge(expNodeId, whileNodeId, "condition");
         this.currentBranchType = true;
 
         let symbolTableCopy: Map<string, NodeId> = this.symbolTable.getCopy();
@@ -197,6 +195,8 @@ class Analyzer {
             this.patchingVariablesCounter--;
         });
 
+        let expNodeId: NodeId = this.processExpression(whileStatement.expression);
+        this.graph.addEdge(expNodeId, whileNodeId, "condition");
         this.processIfBlock(whileStatement.statement);
         let lastBlockControlVertex: NodeId = this.getLastControlVertex(whileNodeId);
 
