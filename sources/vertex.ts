@@ -163,6 +163,16 @@ export class IfVertex extends ControlVertex {
     }
 }
 
+export class WhileVertex extends ControlVertex {
+    constructor() {
+        super();
+    }
+
+    public getLabel(): string {
+        return this.getLabelPrefix() + "while";
+    }
+}
+
 export class PhiVertex extends DataVertex {
     public mergeId: NodeId;
 
@@ -205,20 +215,20 @@ export class DummyVertex extends ControlVertex {
     }
 
     public getLabel(): string {
-        return this.getLabelPrefix() + "Dummy";
+        return this.getLabelPrefix() + "dummy";
     }
 }
 
 export class MergeVertex extends ControlVertex {
-    public ifId: NodeId;
+    public branchOriginId: NodeId;
 
-    constructor(_ifId: NodeId) {
+    constructor(_branchOriginId: NodeId) {
         super();
-        this.ifId = _ifId;
+        this.branchOriginId = _branchOriginId;
     }
 
     public getLabel(): string {
-        return this.getLabelPrefix() + "merge (if: " + String(this.ifId) + ")";
+        return this.getLabelPrefix() + "merge (" + String(this.branchOriginId) + ")";
     }
 }
 

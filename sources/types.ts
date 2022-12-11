@@ -1,4 +1,5 @@
 export type NodeId = number;
+export let UNKNOWN_ID: number = -1;
 
 export enum BinaryOperation {
     Add,
@@ -29,6 +30,7 @@ export enum VertexType {
     Parameter,
     BinaryOperation,
     UnaryOperation,
+    While,
     If,
     Phi,
     Start,

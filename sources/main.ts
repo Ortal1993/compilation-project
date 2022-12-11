@@ -1,8 +1,8 @@
 import * as ts from "typescript";
-import { Graph } from "./graph";
+import { Graph, Edge } from "./graph";
 import { SymbolTable } from "./symbolTable";
 import { ConstTable } from "./constTable";
-import { NodeId, VertexType, BinaryOperation, UnaryOperation } from "./types";
+import { NodeId, UNKNOWN_ID, VertexType, BinaryOperation, UnaryOperation } from "./types";
 import * as vertex from "./vertex";
 
 class Analyzer {
@@ -14,6 +14,8 @@ class Analyzer {
     private controlVertex: NodeId;
     private functionsStack: Array<NodeId>;
     private currentBranchType: boolean;
+    private backPachtingStack: Array<Array<string>>;
+    private patchingVariablesCounter: NodeId;
 
     public constructor( _output: string, _sourceName: string) {
         this.output = _output;
@@ -24,6 +26,8 @@ class Analyzer {
         this.controlVertex = 0;
         this.functionsStack = new Array<NodeId>();
         this.currentBranchType = false;
+        this.backPachtingStack = new Array<Array<string>>();
+        this.patchingVariablesCounter = -1;
     }
 
     public run() {
@@ -89,6 +93,9 @@ class Analyzer {
                     break;
                 case ts.SyntaxKind.ReturnStatement:
                     this.processReturnStatement(statement as ts.ReturnStatement);
+                    break;
+                case ts.SyntaxKind.WhileStatement:
+                    this.processWhileStatement(statement as ts.WhileStatement);
                     break;
                 default:
                     throw new Error(`not implemented`);
@@ -170,13 +177,63 @@ class Analyzer {
         return callNodeId;
     }
 
+    private processWhileStatement(whileStatement: ts.WhileStatement): void {
+        let preStatementControlVertex: NodeId = this.controlVertex;
+        let expNodeId: NodeId = this.processExpression(whileStatement.expression);
+        let whileNodeId: NodeId = this.graph.addVertex(VertexType.While)
+        let mergeNodeId: NodeId = this.graph.addVertex(VertexType.Merge, {branchOriginId: whileNodeId});
+        this.nextControl(mergeNodeId);
+        this.nextControl(whileNodeId);
+        this.graph.addEdge(expNodeId, whileNodeId, "condition");
+        this.currentBranchType = true;
+
+        let symbolTableCopy: Map<string, NodeId> = this.symbolTable.getCopy();
+        let previousPatchingVariablesCounter: NodeId = this.patchingVariablesCounter;
+        let patchingIdToVarName: Map<NodeId, string> = new Map<NodeId, string>();
+        symbolTableCopy.forEach((nodeId: NodeId, varName: string) => {
+            this.symbolTable.updateNodeId(varName, this.patchingVariablesCounter);
+            patchingIdToVarName.set(this.patchingVariablesCounter, varName);
+            this.patchingVariablesCounter--;
+        });
+
+        this.processIfBlock(whileStatement.statement);
+        let lastBlockControlVertex: NodeId = this.controlVertex;
+
+        let changedVars: Map<string, NodeId> = new Map<string, NodeId>();
+        symbolTableCopy.forEach((nodeId: NodeId, varName: string) => {
+            let currentNodeId: NodeId = this.symbolTable.getIdByName(varName);
+            if (currentNodeId < 0) { // the variable was not changed during the while-block.
+                                     // thus we need to recover its node id
+                this.symbolTable.updateNodeId(varName, nodeId);
+            }
+            else { // the variable was changed during the while-block.
+                   // thus we need to create a phi vertex for it
+                changedVars.set(varName, currentNodeId);
+            }
+        });
+        this.createPhiVertices(symbolTableCopy, changedVars, new Map<string, NodeId>(),
+                               mergeNodeId, lastBlockControlVertex, preStatementControlVertex);
+
+        let edgesWithNegativeSource: Array<Edge> = this.graph.getEdgesWithNegativeSource();
+        edgesWithNegativeSource.forEach((edge: Edge) => {
+            let varName: string = patchingIdToVarName.get(edge.srcId) as string;
+            let nodeId: NodeId = this.symbolTable.getIdByName(varName);
+            edge.srcId = nodeId;
+        });
+
+        this.nextControl(mergeNodeId);
+        this.controlVertex = whileNodeId;
+        this.currentBranchType = false;
+        this.patchingVariablesCounter = previousPatchingVariablesCounter;
+    }
+
     private processIfStatement(ifStatement: ts.IfStatement): Set<string> {
         let ifNodeId: NodeId = this.graph.addVertex(VertexType.If);
 
         this.nextControl(ifNodeId);
 
         let expNodeId: NodeId = this.processExpression(ifStatement.expression);
-        this.graph.addEdge(expNodeId, ifNodeId, "cond");
+        this.graph.addEdge(expNodeId, ifNodeId, "condition");
 
         let symbolTableCopy: Map<string, NodeId> = this.symbolTable.getCopy();
 
