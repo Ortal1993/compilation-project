@@ -44,7 +44,7 @@ class Analyzer {
 
         const program = ts.createProgram([this.sourceName], {});
         let sourceFiles = program.getSourceFiles().filter((sourceFile: ts.SourceFile) => !sourceFile.isDeclarationFile);
-        sourceFiles.forEach((sourceFile: ts.SourceFile) => this.processStatements(sourceFile.statements));
+        sourceFiles.forEach((sourceFile: ts.SourceFile) => this.processBlockStatements(sourceFile.statements));
 
         this.graph.print(false, this.output);
 
@@ -74,14 +74,21 @@ class Analyzer {
         this.controlVertex = nextControlId;
     }
 
-    private processStatements(statements: ts.NodeArray<ts.Statement>): void {
+    private processBlockStatements(statements: ts.NodeArray<ts.Statement> | Array<ts.Statement>): void {
         let postponedFunctionStatements: Array<ts.FunctionDeclaration> = [];
+        this.symbolTable.addNewScope();
+
+        //supports function definition after they are used
+        statements.forEach((statement: ts.Statement) => {
+            if (statement.kind === ts.SyntaxKind.FunctionDeclaration) {
+                this.processFunctionDeclaration(statement as ts.FunctionDeclaration);
+                postponedFunctionStatements.push(statement as ts.FunctionDeclaration);
+            }
+        });
 
         statements.forEach((statement: ts.Statement) => {
             switch (statement.kind) {
                 case ts.SyntaxKind.FunctionDeclaration:
-                    this.processFunctionDeclaration(statement as ts.FunctionDeclaration);
-                    postponedFunctionStatements.push(statement as ts.FunctionDeclaration);
                     break;
                 case ts.SyntaxKind.VariableStatement:
                     this.processVariableStatement(statement as ts.VariableStatement);
@@ -104,8 +111,10 @@ class Analyzer {
         });
 
         this.processPostponedFunctionStatements(postponedFunctionStatements);
+        this.symbolTable.removeCurrentScope();
     }
 
+    //supports cases in which function's definition uses variable that is declared only after the definition
     private processPostponedFunctionStatements(postponedFunctionStatements: Array<ts.FunctionDeclaration>): void {
         let prevControlVertex: NodeId = this.controlVertex;
 
@@ -124,7 +133,7 @@ class Analyzer {
                 this.symbolTable.addSymbol(parameterName, parameterNodeId, false, true);
             });
 
-            this.processStatements((funcDeclaration.body as ts.Block).statements);
+            this.processBlockStatements((funcDeclaration.body as ts.Block).statements);
 
             this.functionsStack.shift();
             this.symbolTable.removeCurrentScope();
@@ -178,15 +187,37 @@ class Analyzer {
         return callNodeId;
     }
 
+    private processBranchBlockWrapper(statement: ts.Statement, branchType: boolean): void{
+        this.currentBranchType = branchType;
+
+        if(statement.kind === ts.SyntaxKind.Block){
+            this.processBlockStatements((statement as ts.Block).statements); 
+        }
+        else{
+            let block: Array<ts.Statement> = [statement];
+            this.processBlockStatements(block);
+        }
+    }
+
+    // private prepareForPatching(symbolTableCopy: Map<string, NodeId>, ): void {
+    //     let previousPatchingVariablesCounter: NodeId = this.patchingVariablesCounter;
+    //     let patchingIdToVarName: Map<NodeId, string> = new Map<NodeId, string>();
+    //     symbolTableCopy.forEach((nodeId: NodeId, varName: string) => {
+    //         this.symbolTable.updateNodeId(varName, this.patchingVariablesCounter);
+    //         patchingIdToVarName.set(this.patchingVariablesCounter, varName);
+    //         this.patchingVariablesCounter--;
+    //     });
+    // }
+
     private processWhileStatement(whileStatement: ts.WhileStatement): void {
         let preStatementControlVertex: NodeId = this.controlVertex;
         let whileNodeId: NodeId = this.graph.addVertex(VertexType.While)
         let mergeNodeId: NodeId = this.graph.addVertex(VertexType.Merge, {branchOriginId: whileNodeId});
         this.nextControl(mergeNodeId);
         this.nextControl(whileNodeId);
-        this.currentBranchType = true;
 
         let symbolTableCopy: Map<string, NodeId> = this.symbolTable.getCopy();
+        //this.prepareForPatching(symbolTableCopy);
         let previousPatchingVariablesCounter: NodeId = this.patchingVariablesCounter;
         let patchingIdToVarName: Map<NodeId, string> = new Map<NodeId, string>();
         symbolTableCopy.forEach((nodeId: NodeId, varName: string) => {
@@ -197,7 +228,8 @@ class Analyzer {
 
         let expNodeId: NodeId = this.processExpression(whileStatement.expression);
         this.graph.addEdge(expNodeId, whileNodeId, "condition");
-        this.processIfBlock(whileStatement.statement);
+        this.processBranchBlockWrapper(whileStatement.statement, true);
+    
         let lastBlockControlVertex: NodeId = this.getLastControlVertex(whileNodeId);
 
         let changedVars: Map<string, NodeId> = new Map<string, NodeId>();
@@ -228,7 +260,7 @@ class Analyzer {
         this.patchingVariablesCounter = previousPatchingVariablesCounter;
     }
 
-    private processIfStatement(ifStatement: ts.IfStatement): Set<string> {
+    private processIfStatement(ifStatement: ts.IfStatement): void {
         let ifNodeId: NodeId = this.graph.addVertex(VertexType.If);
 
         this.nextControl(ifNodeId);
@@ -238,48 +270,50 @@ class Analyzer {
 
         let symbolTableCopy: Map<string, NodeId> = this.symbolTable.getCopy();
 
-        let allChangedVars: Set<string> = new Set<string>();
-        let changedVars: Set<string>;
-        let trueBranchSymbolTable: Map<string, NodeId>;
-        let falseBranchSymbolTable: Map<string, NodeId>;
-
         let mergeNodeId: NodeId = this.graph.addVertex(VertexType.Merge, {branchOriginId: ifNodeId});
 
-        this.currentBranchType = true;
-        changedVars = this.processIfBlock(ifStatement.thenStatement);
-        changedVars.forEach((e : string) => { allChangedVars.add(e); });
-        trueBranchSymbolTable = this.symbolTable.getCopy(changedVars);
+        this.processBranchBlockWrapper(ifStatement.thenStatement, true);
+
+        let trueBranchChangedVars: Map<string, NodeId> = new Map<string, NodeId>();
+        symbolTableCopy.forEach((nodeId: NodeId, varName: string) => {
+            let currentNodeId: NodeId = this.symbolTable.getIdByName(varName);
+            if (currentNodeId !== nodeId) { // the variable was changed during the block.
+                                     // thus we need to recover its node id
+                this.symbolTable.updateNodeId(varName, nodeId);
+                trueBranchChangedVars.set(varName, currentNodeId);
+            }            
+        });
 
         let lastTrueBranchControlVertex: NodeId = this.getLastControlVertex(ifNodeId);
         this.nextControl(mergeNodeId);
-
         this.controlVertex = ifNodeId;
 
-        this.currentBranchType = false;
-
-        if (ifStatement.elseStatement === undefined) {
-            falseBranchSymbolTable = new Map<string, NodeId>();
-        }
-        else {
+        let falseBranchChangedVars: Map<string, NodeId> = new Map<string, NodeId>();
+        if (ifStatement.elseStatement !== undefined) {
             // In case we have else-if then ifStatement.elseStatement is a ifStatement itself.
             // Otherwise, the ifStatement.elseStatement is a block of the false branch.
             if (ifStatement.elseStatement.kind === ts.SyntaxKind.IfStatement) {
-                changedVars = this.processIfStatement(ifStatement.elseStatement as ts.IfStatement);
+                this.processIfStatement(ifStatement.elseStatement as ts.IfStatement);
             }
             else {
-                changedVars = this.processIfBlock(ifStatement.elseStatement);
+                this.processBranchBlockWrapper(ifStatement.elseStatement, false);
             }
-            changedVars.forEach((e : string) => { allChangedVars.add(e); });
-            falseBranchSymbolTable = this.symbolTable.getCopy(changedVars);
+            symbolTableCopy.forEach((nodeId: NodeId, varName: string) => {
+                let currentNodeId: NodeId = this.symbolTable.getIdByName(varName);
+                if (currentNodeId !== nodeId) { // the variable was changed during the block.
+                                         // thus we need to recover its node id
+                    this.symbolTable.updateNodeId(varName, nodeId);
+                    falseBranchChangedVars.set(varName, currentNodeId);
+                }            
+            });
         }
 
         let lastFalseBranchControlVertex: NodeId = this.getLastControlVertex(ifNodeId);
         this.nextControl(mergeNodeId);
 
-        this.createPhiVertices(symbolTableCopy, trueBranchSymbolTable, falseBranchSymbolTable,
+        this.createPhiVertices(symbolTableCopy, trueBranchChangedVars, falseBranchChangedVars,
                                mergeNodeId, lastTrueBranchControlVertex, lastFalseBranchControlVertex);
 
-        return allChangedVars;
     }
 
     private getLastControlVertex(StartBlockNodeId: NodeId) : NodeId {
@@ -335,35 +369,6 @@ class Analyzer {
                 this.symbolTable.updateNodeId(varName, phiNodeId);
             }
         });
-    }
-
-    private processIfBlock(statements: ts.Statement) {
-        let changedVars: Set<string> = new Set<string>();
-        this.symbolTable.addNewScope();
-        statements.forEachChild(statement => {
-            switch (statement.kind) {
-                case ts.SyntaxKind.VariableStatement:
-                    this.processVariableStatement(statement as ts.VariableStatement);
-                    break;
-                case ts.SyntaxKind.ExpressionStatement:
-                    let expressionResult: NodeId = this.processExpressionStatement(statement as ts.ExpressionStatement);
-                    if ((statement as ts.ExpressionStatement).expression.kind === ts.SyntaxKind.BinaryExpression) {
-                        changedVars.add(this.symbolTable.getNameById(expressionResult));
-                    }
-                    break;
-                case ts.SyntaxKind.IfStatement:
-                    let ifResult: Set<string> = this.processIfStatement(statement as ts.IfStatement);
-                    ifResult.forEach((e : string) => { changedVars.add(e); });
-                    break;
-                case ts.SyntaxKind.ReturnStatement:
-                    this.processReturnStatement(statement as ts.ReturnStatement);
-                    break;
-                default:
-                    throw new Error(`not implemented`);
-            }
-        });
-        this.symbolTable.removeCurrentScope();
-        return changedVars;
     }
 
     private processReturnStatement(retStatement: ts.ReturnStatement): void {
