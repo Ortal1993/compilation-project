@@ -244,3 +244,24 @@ export class ReturnVertex extends ControlVertex {
         return this.getLabelPrefix() + "return (" + String(this.funcId) + ")";
     }
 }
+
+export class ContinueVertex extends ControlVertex {
+    constructor() {
+        super();
+    }
+
+    public getLabel(): string {
+        return this.getLabelPrefix() + "continue";
+    }
+}
+
+export class BreakVertex extends ControlVertex {
+
+    constructor() {
+        super();
+    }
+
+    public getLabel(): string {
+        return this.getLabelPrefix() + "break";
+    }
+}

@@ -73,6 +73,12 @@ export class Graph {
             case VertexType.Return:
                 newVertex = new vertex.ReturnVertex(properties["funcId"]);
                 break;
+            case VertexType.Continue:
+                newVertex = new vertex.ContinueVertex();
+                break;
+            case VertexType.Break:
+                newVertex = new vertex.BreakVertex();
+                break;
             default:
                 throw new Error(`Undefined vertex type`);
         }

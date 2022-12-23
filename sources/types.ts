@@ -36,5 +36,7 @@ export enum VertexType {
     Call,
     Dummy,
     Merge,
-    Return
+    Return,
+    Continue,
+    Break
 }

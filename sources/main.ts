@@ -13,6 +13,7 @@ class Analyzer {
     private constTable: ConstTable;
     private controlVertex: NodeId;
     private functionsStack: Array<NodeId>;
+    private whileStack: Array<NodeId>;
     private currentBranchType: boolean;
     private patchingVariablesCounter: NodeId;
 
@@ -24,6 +25,7 @@ class Analyzer {
         this.constTable = new ConstTable(this.graph);
         this.controlVertex = 0;
         this.functionsStack = new Array<NodeId>();
+        this.whileStack = new Array<NodeId>();
         this.currentBranchType = false;
         this.patchingVariablesCounter = -1;
     }
@@ -63,7 +65,10 @@ class Analyzer {
 
     private nextControl(nextControlId: NodeId) {
         let currentControlVertex: vertex.Vertex = this.graph.getVertexById(this.controlVertex);
-        if (!(currentControlVertex instanceof vertex.ReturnVertex)) {
+        let doNotCreateEdge: boolean = currentControlVertex instanceof vertex.ReturnVertex ||
+                                       currentControlVertex instanceof vertex.ContinueVertex ||
+                                       currentControlVertex instanceof vertex.BreakVertex;
+        if (!doNotCreateEdge) {
             let isBranchVertex = currentControlVertex instanceof vertex.IfVertex ||
                                  currentControlVertex instanceof vertex.WhileVertex;
             let edgeLabel: string = isBranchVertex ? String(this.currentBranchType) + "-control" : "control";
@@ -102,6 +107,12 @@ class Analyzer {
                     break;
                 case ts.SyntaxKind.WhileStatement:
                     this.processWhileStatement(statement as ts.WhileStatement);
+                    break;
+                case ts.SyntaxKind.ContinueStatement:
+                    this.processContinueStatement(statement as ts.ContinueStatement);
+                    break;
+                case ts.SyntaxKind.BreakStatement:
+                    this.processBreakStatement(statement as ts.BreakStatement);
                     break;
                 default:
                     throw new Error(`not implemented`);
@@ -227,12 +238,23 @@ class Analyzer {
         return changedVars;
     }
 
+    private processContinueStatement(continueStatement: ts.ContinueStatement): void {
+        let continueNodeId: NodeId = this.graph.addVertex(VertexType.Continue);
+        this.nextControl(continueNodeId);
+        this.graph.addEdge(continueNodeId, this.whileStack[0], "control");
+    }
+
+    private processBreakStatement(breakStatement: ts.BreakStatement): void {
+        throw new Error('not implemented');
+    }
+
     private processWhileStatement(whileStatement: ts.WhileStatement): void {
         let preMergeControlVertex: NodeId = this.controlVertex;
         let whileNodeId: NodeId = this.graph.addVertex(VertexType.While)
         let mergeNodeId: NodeId = this.graph.addVertex(VertexType.Merge, {branchOriginId: whileNodeId});
         this.nextControl(mergeNodeId);
         this.nextControl(whileNodeId);
+        this.whileStack.unshift(whileNodeId);
 
         let symbolTableCopy: Map<string, NodeId> = this.symbolTable.getCopy();
         let [previousPatchingVariablesCounter, patchingIdToVarName] = this.prepareForWhileStatementPatching(symbolTableCopy);
@@ -254,6 +276,7 @@ class Analyzer {
         this.controlVertex = whileNodeId;
         this.currentBranchType = false;
         this.patchingVariablesCounter = previousPatchingVariablesCounter;
+        this.whileStack.shift();
     }
 
     private processIfStatement(ifStatement: ts.IfStatement): void {
