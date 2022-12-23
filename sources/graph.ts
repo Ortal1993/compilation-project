@@ -2,23 +2,33 @@ import { NodeId, VertexType, BinaryOperation, UnaryOperation } from "./types";
 import * as vertex from "./vertex";
 
 export class Graph {
-    private edges: Edge[];
+    private edges: Array<Edge>;
     private vertices: Map<NodeId, vertex.Vertex>;
 
     public constructor() {
-        this.edges = [];
+        this.edges = new Array<Edge>();
         this.vertices = new Map<NodeId, vertex.Vertex>();
     }
 
-    private checkVertexExists(id: NodeId): void {
-        if (!this.vertices.has(id)) {
+    public getEdgesWithNegativeSource(): Array<Edge> {
+        let edgesWithNegativeSource: Array<Edge> = new Array<Edge>();
+        this.edges.forEach((edge: Edge) => {
+            if (edge.srcId < 0) {
+                edgesWithNegativeSource.push(edge);
+            }
+        });
+        return edgesWithNegativeSource;
+    }
+
+    private checkVertexId(id: NodeId): void {
+        if (!this.vertices.has(id) && id >= 0) {
             throw new Error(`Vertex with id ${id} does not exist`);
         }
     }
 
     public addEdge(srcId: NodeId, dstId: NodeId, type: string): void {
-        this.checkVertexExists(srcId);
-        this.checkVertexExists(dstId);
+        this.checkVertexId(srcId);
+        this.checkVertexId(dstId);
 
         let newEdge: Edge = new Edge(srcId, dstId, type);
         this.edges.push(newEdge);
@@ -54,8 +64,11 @@ export class Graph {
             case VertexType.Dummy:
                 newVertex = new vertex.DummyVertex();
                 break;
+            case VertexType.While:
+                newVertex = new vertex.WhileVertex();
+                break;
             case VertexType.Merge:
-                newVertex = new vertex.MergeVertex(properties["ifId"]);
+                newVertex = new vertex.MergeVertex(properties["branchOriginId"]);
                 break;
             case VertexType.Return:
                 newVertex = new vertex.ReturnVertex(properties["funcId"]);
@@ -104,7 +117,7 @@ export class Graph {
     }
 }
 
-class Edge {
+export class Edge {
     public srcId: NodeId;
     public dstId: NodeId;
     public type: string;

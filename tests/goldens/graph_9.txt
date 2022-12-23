@@ -1,16 +1,16 @@
 digraph G {
-	0 [ label="0 | start (function: __entryPoint__)" shape="rectangle" ];
-	1 [ label="1 | start (function: fact)" shape="rectangle" ];
+	0 [ label="0 | start (__entryPoint__)" shape="rectangle" ];
+	1 [ label="1 | start (fact)" shape="rectangle" ];
 	2 [ label="2 | call" shape="rectangle" ];
 	3 [ label="3 | 10" shape="rectangle" ];
-	4 [ label="4 | param (1): (function: 1)" shape="rectangle" ];
+	4 [ label="4 | param (1): (1)" shape="rectangle" ];
 	5 [ label="5 | if" shape="rectangle" ];
 	6 [ label="6 | 1" shape="rectangle" ];
 	7 [ label="7 | <=" shape="rectangle" ];
-	8 [ label="8 | merge (if: 5)" shape="rectangle" ];
-	9 [ label="9 | return (function: 1)" shape="rectangle" ];
-	10 [ label="10 | Dummy" shape="rectangle" ];
-	11 [ label="11 | return (function: 1)" shape="rectangle" ];
+	8 [ label="8 | merge (5)" shape="rectangle" ];
+	9 [ label="9 | return (1)" shape="rectangle" ];
+	10 [ label="10 | dummy" shape="rectangle" ];
+	11 [ label="11 | return (1)" shape="rectangle" ];
 	12 [ label="12 | call" shape="rectangle" ];
 	13 [ label="13 | -" shape="rectangle" ];
 	14 [ label="14 | *" shape="rectangle" ];
@@ -20,7 +20,7 @@ digraph G {
 	1 -> 5 [ label="control" ];
 	6 -> 7 [ label="right" ];
 	4 -> 7 [ label="left" ];
-	7 -> 5 [ label="cond" ];
+	7 -> 5 [ label="condition" ];
 	5 -> 9 [ label="true-control" ];
 	6 -> 9 [ label="value" ];
 	5 -> 10 [ label="false-control" ];

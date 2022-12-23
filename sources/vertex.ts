@@ -55,7 +55,7 @@ export class ParameterVertex extends DataVertex {
     }
 
     public getLabel(): string {
-        return this.getLabelPrefix() + "param (" + String(this.pos) + "): (function: " + String(this.funcId) + ")";
+        return this.getLabelPrefix() + "param (" + String(this.pos) + "): (" + String(this.funcId) + ")";
     }
 }
 
@@ -163,6 +163,16 @@ export class IfVertex extends ControlVertex {
     }
 }
 
+export class WhileVertex extends ControlVertex {
+    constructor() {
+        super();
+    }
+
+    public getLabel(): string {
+        return this.getLabelPrefix() + "while";
+    }
+}
+
 export class PhiVertex extends DataVertex {
     public mergeId: NodeId;
 
@@ -172,7 +182,7 @@ export class PhiVertex extends DataVertex {
     }
 
     public getLabel(): string {
-        return this.getLabelPrefix() + "phi " + " (merge: " + String(this.mergeId) + ")";
+        return this.getLabelPrefix() + "phi " + " (" + String(this.mergeId) + ")";
     }
 }
 
@@ -185,7 +195,7 @@ export class StartVertex extends ControlVertex {
     }
 
     public getLabel(): string {
-        return this.getLabelPrefix() + "start (function: " + this.name + ")";
+        return this.getLabelPrefix() + "start (" + this.name + ")";
     }
 }
 
@@ -205,20 +215,20 @@ export class DummyVertex extends ControlVertex {
     }
 
     public getLabel(): string {
-        return this.getLabelPrefix() + "Dummy";
+        return this.getLabelPrefix() + "dummy";
     }
 }
 
 export class MergeVertex extends ControlVertex {
-    public ifId: NodeId;
+    public branchOriginId: NodeId;
 
-    constructor(_ifId: NodeId) {
+    constructor(_branchOriginId: NodeId) {
         super();
-        this.ifId = _ifId;
+        this.branchOriginId = _branchOriginId;
     }
 
     public getLabel(): string {
-        return this.getLabelPrefix() + "merge (if: " + String(this.ifId) + ")";
+        return this.getLabelPrefix() + "merge (" + String(this.branchOriginId) + ")";
     }
 }
 
@@ -231,6 +241,6 @@ export class ReturnVertex extends ControlVertex {
     }
 
     public getLabel(): string {
-        return this.getLabelPrefix() + "return (function: " + String(this.funcId) + ")";
+        return this.getLabelPrefix() + "return (" + String(this.funcId) + ")";
     }
 }

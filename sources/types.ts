@@ -29,6 +29,7 @@ export enum VertexType {
     Parameter,
     BinaryOperation,
     UnaryOperation,
+    While,
     If,
     Phi,
     Start,
