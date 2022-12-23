@@ -209,6 +209,19 @@ export class CallVertex extends ControlVertex {
     }
 }
 
+export class NewVertex extends ControlVertex {
+    public className: string;
+
+    constructor(_className: string) {
+        super();
+        this.className = _className;
+    }
+
+    public getLabel(): string {
+        return this.getLabelPrefix() + "new " + this.className;
+    }
+}
+
 export class DummyVertex extends ControlVertex {
     constructor() {
         super();

@@ -13,6 +13,7 @@ class Analyzer {
     private constTable: ConstTable;
     private controlVertex: NodeId;
     private functionsStack: Array<NodeId>;
+    private classesStack: Array<string>;
     private whileStack: Array<NodeId>;
     private breakStack: Array<Array<NodeId>>; // stack of lists
     private currentBranchType: boolean;
@@ -26,6 +27,7 @@ class Analyzer {
         this.constTable = new ConstTable(this.graph);
         this.controlVertex = 0;
         this.functionsStack = new Array<NodeId>();
+        this.classesStack = new Array<string>();
         this.whileStack = new Array<NodeId>();
         this.breakStack = new Array<Array<NodeId>>();
         this.currentBranchType = false;
@@ -107,6 +109,9 @@ class Analyzer {
             switch (statement.kind) {
                 case ts.SyntaxKind.FunctionDeclaration:
                     break;
+                case ts.SyntaxKind.ClassDeclaration:
+                    this.processClassDeclaration(statement as ts.ClassDeclaration);
+                    break;
                 case ts.SyntaxKind.VariableStatement:
                     this.processVariableStatement(statement as ts.VariableStatement);
                     break;
@@ -171,6 +176,48 @@ class Analyzer {
         this.symbolTable.addSymbol(funcName, funcStartNodeId, true);
     }
 
+    private processClassDeclaration(classDeclaration: ts.ClassDeclaration): void {
+        let className: string = (classDeclaration.name as any).escapedText;
+        this.classesStack.unshift(className);
+        for (let member of classDeclaration.members) {
+            switch (member.kind) {
+                case ts.SyntaxKind.Constructor:
+                    this.processConstructorDeclaration(member as ts.ConstructorDeclaration);
+                    break;
+                default:
+                    throw new Error('not implemented');
+            }
+        }
+        this.classesStack.shift();
+    }
+
+    private processConstructorDeclaration(constructorDecl: ts.ConstructorDeclaration): void {
+        let constructorName: string = this.classesStack[0] + '::Constructor';
+        let methodStartNodeId: NodeId = this.graph.addVertex(VertexType.Start, {name: constructorName});
+
+        this.symbolTable.addSymbol(constructorName, methodStartNodeId, true);
+        let prevControlVertex: NodeId = this.controlVertex;
+        this.controlVertex = methodStartNodeId;
+
+        this.symbolTable.addNewScope();
+        this.functionsStack.unshift(methodStartNodeId);
+
+        let thisNodeId: NodeId = this.graph.addVertex(VertexType.Parameter, {pos: 0, funcId: methodStartNodeId});
+        this.symbolTable.addSymbol('this', thisNodeId, false, true);
+        constructorDecl.parameters.forEach((parameter: ts.ParameterDeclaration, position: number) => {
+            let parameterName: string = (parameter.name as any).escapedText;
+            let parameterNodeId: NodeId = this.graph.addVertex(VertexType.Parameter,
+                                                                {pos: position + 1, funcId: methodStartNodeId});
+            this.symbolTable.addSymbol(parameterName, parameterNodeId, false, true);
+        });
+
+        this.processBlockStatements((constructorDecl.body as ts.Block).statements);
+
+        this.functionsStack.shift();
+        this.symbolTable.removeCurrentScope();
+        this.controlVertex = prevControlVertex;
+    }
+
     private processVariableStatement(varStatement: ts.VariableStatement): void {
         varStatement.forEachChild(child => {
             switch (child.kind) {
@@ -208,6 +255,24 @@ class Analyzer {
         this.graph.addEdge(callNodeId, startNodeId, "call");
 
         return callNodeId;
+    }
+
+    private processNewExpression(newExpression: ts.NewExpression): NodeId {
+        let className: string = Analyzer.getVarName(newExpression.expression as ts.Identifier);
+        let newNodeId: NodeId = this.graph.addVertex(VertexType.New, {name: className})
+
+        if (newExpression.arguments !== undefined) {
+            newExpression.arguments.forEach((argument, pos) => {
+                let argumentNodeId: NodeId = this.processExpression(argument);
+                this.graph.addEdge(argumentNodeId, newNodeId, "pos: " + String(pos + 1));
+            });
+        }
+
+        let constructorName: string = className + "::Constructor";
+        let constructorNodeId: NodeId = this.symbolTable.getIdByName(constructorName);
+        this.graph.addEdge(newNodeId, constructorNodeId, "call");
+
+        return newNodeId;
     }
 
     private processBranchBlockWrapper(statement: ts.Statement): void{
@@ -457,6 +522,9 @@ class Analyzer {
                 break;
             case ts.SyntaxKind.CallExpression:
                 expNodeId = this.processCallExpression(expression as ts.CallExpression);
+                break;
+            case ts.SyntaxKind.NewExpression:
+                expNodeId = this.processNewExpression(expression as ts.NewExpression);
                 break;
             default:
                 throw new Error(`not implemented`);

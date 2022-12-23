@@ -1,0 +1,17 @@
+digraph G {
+	0 [ label="0 | start (__entryPoint__)" shape="rectangle" ];
+	1 [ label="1 | start (add)" shape="rectangle" ];
+	2 [ label="2 | start (A::Constructor)" shape="rectangle" ];
+	3 [ label="3 | param (0): (2)" shape="rectangle" ];
+	4 [ label="4 | new A" shape="rectangle" ];
+	5 [ label="5 | call" shape="rectangle" ];
+	6 [ label="6 | param (1): (1)" shape="rectangle" ];
+	7 [ label="7 | return (1)" shape="rectangle" ];
+	8 [ label="8 | 5" shape="rectangle" ];
+	4 -> 2 [ label="call" ];
+	0 -> 5 [ label="control" ];
+	4 -> 5 [ label="pos: 1" ];
+	5 -> 1 [ label="call" ];
+	1 -> 7 [ label="control" ];
+	8 -> 7 [ label="value" ];
+}

@@ -61,6 +61,9 @@ export class Graph {
             case VertexType.Call:
                 newVertex = new vertex.CallVertex();
                 break;
+            case VertexType.New:
+                newVertex = new vertex.NewVertex(properties["name"]);
+                break;
             case VertexType.Dummy:
                 newVertex = new vertex.DummyVertex();
                 break;

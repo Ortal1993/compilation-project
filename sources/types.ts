@@ -38,5 +38,6 @@ export enum VertexType {
     Merge,
     Return,
     Continue,
-    Break
+    Break,
+    New
 }
