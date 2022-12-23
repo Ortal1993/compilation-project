@@ -1,5 +1,4 @@
 export type NodeId = number;
-export let UNKNOWN_ID: number = -1;
 
 export enum BinaryOperation {
     Add,
