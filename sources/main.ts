@@ -14,6 +14,7 @@ class Analyzer {
     private controlVertex: NodeId;
     private functionsStack: Array<NodeId>;
     private whileStack: Array<NodeId>;
+    private breakStack: Array<Array<NodeId>>; // stack of lists
     private currentBranchType: boolean;
     private patchingVariablesCounter: NodeId;
 
@@ -26,6 +27,7 @@ class Analyzer {
         this.controlVertex = 0;
         this.functionsStack = new Array<NodeId>();
         this.whileStack = new Array<NodeId>();
+        this.breakStack = new Array<Array<NodeId>>();
         this.currentBranchType = false;
         this.patchingVariablesCounter = -1;
     }
@@ -75,6 +77,18 @@ class Analyzer {
             this.graph.addEdge(this.controlVertex, nextControlId, edgeLabel);
         }
         this.controlVertex = nextControlId;
+
+        if (currentControlVertex instanceof vertex.WhileVertex && this.currentBranchType === false) {
+            this.backpatchBreakEdges();
+        }
+    }
+
+    private backpatchBreakEdges(): void {
+        let currentBreakList: Array<NodeId> = this.breakStack[0];
+        for (let breakNodeId of currentBreakList) {
+            this.graph.addEdge(breakNodeId, this.controlVertex, "control");
+        }
+        this.breakStack.shift(); // pop the last break list
     }
 
     private processBlockStatements(statements: ts.NodeArray<ts.Statement> | Array<ts.Statement>): void {
@@ -245,7 +259,9 @@ class Analyzer {
     }
 
     private processBreakStatement(breakStatement: ts.BreakStatement): void {
-        throw new Error('not implemented');
+        let breakNodeId: NodeId = this.graph.addVertex(VertexType.Break);
+        this.nextControl(breakNodeId);
+        this.breakStack[0].push(breakNodeId);
     }
 
     private processWhileStatement(whileStatement: ts.WhileStatement): void {
@@ -255,6 +271,7 @@ class Analyzer {
         this.nextControl(mergeNodeId);
         this.nextControl(whileNodeId);
         this.whileStack.unshift(whileNodeId);
+        this.breakStack.unshift(new Array<NodeId>()); // the list is popped right after backpatching it inside nextControl()
 
         let symbolTableCopy: Map<string, NodeId> = this.symbolTable.getCopy();
         let [previousPatchingVariablesCounter, patchingIdToVarName] = this.prepareForWhileStatementPatching(symbolTableCopy);

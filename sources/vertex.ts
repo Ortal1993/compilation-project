@@ -25,7 +25,7 @@ abstract class DataVertex extends Vertex {
     }
 }
 
-abstract class ControlVertex extends Vertex {
+export abstract class ControlVertex extends Vertex {
     constructor() {
         super();
     }
