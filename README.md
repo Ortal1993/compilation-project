@@ -18,20 +18,21 @@ A graph file corresponding to the sample is written to the *output* directory.
 Usage: npm run start -- [options]
 
 options:
-    -n | --no-build
-        Skip build stage
-    -i | --input INPUT
-        Run the analyzer on input file named <INPUT> (default: do not run anything)
-    -s | --sample SAMPLE
-        Run the analyzer on sample with index <SAMPLE> (default: do not run anything)
-    -o | --output OUTPUT
-        Save the graph inside file named <OUTPUT> (default: graph.txt)
-    -v | --verbose
-        Print logs and output results
-    -c | --clean
-        Before building, remove build and output directories
-    -h | --help
+    -h, --help
         Show this help message and exit
+    -n, --no-build
+        Skip build stage
+    -s SAMPLES [SAMPLES ...], --sample SAMPLES [SAMPLES ...]
+        Run the analyzer on sample with index <SAMPLE> (default: do not run anything)
+    -i INPUTS [INPUTS ...], --input INPUTS [INPUTS ...]
+        Run the analyzer on input file named <INPUT> (default: do not run anything)
+    -o OUTPUT, --output OUTPUT
+        Save the graph inside file named <OUTPUT> (default: graph.txt)
+    -v, --verbose
+        Print logs and output results
+    -c, --clean
+        Before building, remove build and output directories
+
 ```
 
 * Samples can be found in *tests/samples* directory.
@@ -43,7 +44,7 @@ For example, running:
 npm run start -- --sample 2 --verbose
 ```
 
-will build the project, run it on the second sample in the samples directory and eventually print the graph.
+will build the project, run it on the second sample in the samples directory and eventually print the output graph path.
 
 ## Test
 
