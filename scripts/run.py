@@ -6,6 +6,8 @@ import shutil
 import os
 import subprocess
 import sys
+import re
+import difflib
 
 
 def parse_args():
@@ -28,7 +30,15 @@ def parse_args():
     ap.add_argument('-u', '--update-goldens', dest='update_goldens', action='store_true', default=False,
                     help=argparse.SUPPRESS)
 
-    return ap.parse_args()
+    args = ap.parse_args()
+
+    if args.update_goldens:
+        args.test = True
+
+    if args.test:
+        args.clean = True
+
+    return args
 
 
 class Log:
@@ -39,8 +49,9 @@ class Log:
         self.error_prefix = 'ERROR:'
         self.command_prefix = '>>'
 
-    def info(self, msg):
-        print(self.info_prefix, msg)
+    def info(self, msg, new_line=True, prefix=True):
+        full_msg = (self.info_prefix + ' ' + msg) if prefix else msg
+        print(full_msg, end='\n' if new_line else '')
 
     def error(self, msg, exit_code=_DEFAULT_EXIT_CODE):
         print(self.error_prefix, msg)
@@ -71,6 +82,8 @@ class Config:
         self.output = args.output
         self.verbose = args.verbose
         self.clean = args.clean
+        self.test = args.test
+        self.update_goldens = args.update_goldens
         self.paths = Paths()
 
 
@@ -96,7 +109,7 @@ class Stages:
 
 
     def build(self):
-        if not self.cfg.build:
+        if not self.cfg.build and not self.cfg.test:
             if self.cfg.verbose:
                 self.log.info('Skipping build stage')
             return
@@ -118,6 +131,10 @@ class Stages:
                 self.log.info('Build finished successfully')
 
     def run(self):
+        if self.cfg.test:
+            self._test()
+            return
+
         input_files = self._collect_inputs()
 
         if not input_files:
@@ -129,10 +146,7 @@ class Stages:
 
         self._create_output_directory()
 
-        node = 'node'
-        entry_point_file = os.path.join(self.cfg.paths.build_dir, 'main.js')
-        output_file = os.path.join(self.cfg.paths.output_dir, self.cfg.output)
-        run_cmd = [node, entry_point_file, output_file] + input_files
+        run_cmd = self._get_run_command([input_file for _, input_file in input_files])
 
         if self.cfg.verbose:
             self.log.command('Running analyzer', ' '.join(run_cmd))
@@ -144,7 +158,97 @@ class Stages:
         else:
             if self.cfg.verbose:
                 self.log.info('Analyzer finished successfully')
-                self.log.info(f'Output path: {output_file}')
+                self.log.info(f'Output path: {os.path.join(self.cfg.paths.output_dir, self.cfg.output)}')
+
+    def _test(self):
+        PASSED, FAILED, UPDATED, UNTOUCHED = 'PASSED', 'FAILED', 'UPDATED', 'UNTOUCHED'
+        any_failed = False
+        any_updated = False
+
+        samples = self._collect_samples()
+        samples.sort(key=lambda sample: int(sample[0]))
+
+        self._create_output_directory()
+
+        for index, sample in samples:
+            failed = False
+            updated = False
+            self.cfg.output = f'graph_{index}.txt'
+            run_cmd = self._get_run_command([sample])
+            if self.cfg.verbose:
+                self.log.info(f'Running sample {index}', new_line=False)
+            try:
+                subprocess.run(run_cmd, check=True)
+            except subprocess.CalledProcessError as e:
+                failed = True
+            else:
+                if self.cfg.update_goldens:
+                    updated = self._update_golden(index)
+                else:
+                    failed = self._is_diff(index)
+
+            if not failed:
+                os.remove(os.path.join(self.cfg.paths.output_dir, self.cfg.output))
+
+            if self.cfg.verbose:
+                if failed:
+                    self.log.info(f'\t\t{FAILED}', prefix=False)
+                if self.cfg.update_goldens:
+                    if updated:
+                        self.log.info(f'\t\t{UPDATED}', prefix=False)
+                    else:
+                        self.log.info(f'\t\t{UNTOUCHED}', prefix=False)
+                if not failed and not self.cfg.update_goldens:
+                    self.log.info(f'\t\t{PASSED}', prefix=False)
+            
+            any_failed = any_failed or failed
+            any_updated = any_updated or updated
+
+        if self.cfg.update_goldens:
+            if any_updated:
+                result = UPDATED
+            else:
+                result = UNTOUCHED
+        else:
+            if any_failed:
+                result = FAILED
+            else:
+                result = PASSED
+        self.log.info(f'Result: {result}', prefix=False)
+
+    def _update_golden(self, index):
+        output = os.path.join(self.cfg.paths.output_dir, self.cfg.output)
+        golden = os.path.join(self.cfg.paths.goldens_dir, f'graph_{index}.txt')
+
+        if self._is_diff(index):
+            try:
+                shutil.copy(output, golden)
+            except shutil.Error as e:
+                self.log.error(f'Failed to updated golden with index {index}', e.errno)
+            return True
+        return False
+
+    def _is_diff(self, index):
+        output = os.path.join(self.cfg.paths.output_dir, self.cfg.output)
+        golden = os.path.join(self.cfg.paths.goldens_dir, f'graph_{index}.txt')
+
+        with open(output, 'r') as output_file:
+            output_lines = output_file.readlines()
+        with open(golden, 'r') as golden_file:
+            golden_lines = golden_file.readlines()
+
+        for _ in difflib.unified_diff(output_lines, golden_lines,
+                                         fromfile=output, tofile=golden,
+                                         lineterm=''):
+            return True
+
+        return False
+
+    def _get_run_command(self, input_files):    
+        node = 'node'
+        entry_point_file = os.path.join(self.cfg.paths.build_dir, 'main.js')
+        output_file = os.path.join(self.cfg.paths.output_dir, self.cfg.output)
+        return [node, entry_point_file, output_file] + input_files
 
     def _collect_sources(self):
         sources = []
@@ -160,36 +264,44 @@ class Stages:
                 self._collect_sources_rec(curr_path)
 
     def _collect_inputs(self):
-        input_files = []
-
         if self.cfg.verbose:
             self.log.info('Collecting input files')
 
-        self._collect_samples(input_files)
+        input_files = self._collect_samples()
 
         if self.cfg.inputs is not None:
             for input_file in self.cfg.inputs:
                 input_path = os.path.realpath(input_file)
                 if not os.path.isfile(input_path):
                     self.log.error(f'Input file {input_path} does not exist')
-                input_files.append(input_path)
+                input_files.append((None, input_path))
 
         return input_files
 
-    def _collect_samples(self, input_files):
+    def _collect_samples(self):
+        samples = []
+
         if self.cfg.samples is not None:
             for sample_index in self.cfg.samples:
                 if not sample_index.isdecimal():
-                    self.log.error('All provided samples must be numbers')
+                    self.log.error('All provided samples must be indexes')
                 found = False
                 for sample_name in os.listdir(self.cfg.paths.samples_dir):
                     sample_file = os.path.join(self.cfg.paths.samples_dir, sample_name)
                     if sample_name.startswith(f'sample_{sample_index}_'):
                         found = True
-                        input_files.append(sample_file)
+                        samples.append((sample_index, sample_file))
                         break
                 if not found:
                     self.log.error(f'Sample with index {sample_index} does not exist')
+        elif self.cfg.test:
+            for sample_name in os.listdir(self.cfg.paths.samples_dir):
+                [sample_index] = [sample[len('sample_'):] for sample in re.findall(r'sample_[0-9]+', sample_name)]
+                sample_file = os.path.join(self.cfg.paths.samples_dir, sample_name)
+                samples.append((sample_index, sample_file))
+
+        return samples
+                    
 
     def _create_output_directory(self):
         if self.cfg.verbose:
