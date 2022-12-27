@@ -7,8 +7,8 @@
     "test": "tests"
   },
   "scripts": {
-    "start": "bash scripts/run.sh",
-    "test": "bash scripts/test.sh"
+    "start": "python3 scripts/run.py",
+    "test": "python3 scripts/run.py --test"
   },
   "repository": {
     "type": "git",
