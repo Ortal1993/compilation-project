@@ -82,6 +82,12 @@ export class Graph {
             case VertexType.Break:
                 newVertex = new vertex.BreakVertex();
                 break;
+            case VertexType.Load:
+                newVertex = new vertex.LoadVertex(properties["property"]);
+                break;
+            case VertexType.Store:
+                newVertex = new vertex.StoreVertex(properties["property"]);
+                break;
             default:
                 throw new Error(`Undefined vertex type`);
         }

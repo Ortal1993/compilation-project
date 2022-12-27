@@ -18,6 +18,7 @@ class Analyzer {
     private breakStack: Array<Array<NodeId>>; // stack of lists
     private currentBranchType: boolean;
     private patchingVariablesCounter: NodeId;
+    private lastIdentifierName: string | undefined;
 
     public constructor( _output: string, _sourceName: string) {
         this.output = _output;
@@ -32,13 +33,14 @@ class Analyzer {
         this.breakStack = new Array<Array<NodeId>>();
         this.currentBranchType = false;
         this.patchingVariablesCounter = -1;
+        this.lastIdentifierName = undefined;
     }
 
     public run() {
         this.buildGraph();
     }
         
-    private static getVarName(identifierExpression: ts.Identifier): string{
+    private static getIdentifierName(identifierExpression: ts.Identifier): string{
         return (identifierExpression as any).escapedText;
     }
 
@@ -184,6 +186,8 @@ class Analyzer {
                 case ts.SyntaxKind.Constructor:
                     this.processConstructorDeclaration(member as ts.ConstructorDeclaration);
                     break;
+                case ts.SyntaxKind.PropertyDeclaration:
+                    break; 
                 default:
                     throw new Error('not implemented');
             }
@@ -217,6 +221,7 @@ class Analyzer {
         this.symbolTable.removeCurrentScope();
         this.controlVertex = prevControlVertex;
     }
+
 
     private processVariableStatement(varStatement: ts.VariableStatement): void {
         varStatement.forEachChild(child => {
@@ -258,7 +263,7 @@ class Analyzer {
     }
 
     private processNewExpression(newExpression: ts.NewExpression): NodeId {
-        let className: string = Analyzer.getVarName(newExpression.expression as ts.Identifier);
+        let className: string = Analyzer.getIdentifierName(newExpression.expression as ts.Identifier);
         let newNodeId: NodeId = this.graph.addVertex(VertexType.New, {name: className})
 
         if (newExpression.arguments !== undefined) {
@@ -271,7 +276,7 @@ class Analyzer {
         let constructorName: string = className + "::Constructor";
         let constructorNodeId: NodeId = this.symbolTable.getIdByName(constructorName);
         this.graph.addEdge(newNodeId, constructorNodeId, "call");
-
+        this.nextControl(newNodeId);
         return newNodeId;
     }
 
@@ -526,10 +531,21 @@ class Analyzer {
             case ts.SyntaxKind.NewExpression:
                 expNodeId = this.processNewExpression(expression as ts.NewExpression);
                 break;
+            case ts.SyntaxKind.PropertyAccessExpression:
+                expNodeId = this.processPropertyAccessExpression(expression as ts.PropertyAccessExpression);
+                break;
+            case ts.SyntaxKind.ThisKeyword:
+                expNodeId = this.processThisExpression(expression as ts.ThisExpression);
+                break;
             default:
                 throw new Error(`not implemented`);
         }
         return expNodeId;
+    }
+
+    private processThisExpression(thisExpression: ts.ThisExpression): NodeId {
+        this.lastIdentifierName = 'this';
+        return this.symbolTable.getIdByName('this');
     }
 
     private processNumericLiteral(numLiteral: ts.NumericLiteral): NodeId {
@@ -629,9 +645,24 @@ class Analyzer {
         let rightNodeId: NodeId = this.processExpression(binExpression.right);
         if (isAssignOperation) {
             // for cases a variable that is already defined is being re-assigned
-            let varName: string = (binExpression.left as any).escapedText;
-            this.symbolTable.updateNodeId(varName, rightNodeId);
-            return rightNodeId;
+            let leftExpression: ts.Expression = binExpression.left;
+            switch (leftExpression.kind) {
+                case ts.SyntaxKind.PropertyAccessExpression:                    
+                    let propertyName: string = Analyzer.getIdentifierName(((leftExpression as ts.PropertyAccessExpression).name) as ts.Identifier);
+                    let expressionNodeId: NodeId = this.processExpression((leftExpression as ts.PropertyAccessExpression).expression);
+                    let storeNodeId: NodeId = this.graph.addVertex(VertexType.Store, {property: propertyName});
+                    this.graph.addEdge(rightNodeId, storeNodeId, "value");
+                    this.graph.addEdge(expressionNodeId, storeNodeId, "object");
+                    this.symbolTable.updateNodeId(this.lastIdentifierName as string, storeNodeId);
+                    this.nextControl(storeNodeId);
+                    return storeNodeId;
+                case ts.SyntaxKind.Identifier:
+                    let varName: string = (binExpression.left as any).escapedText;
+                    this.symbolTable.updateNodeId(varName, rightNodeId);
+                    return rightNodeId;
+                default:
+                    throw new Error(`not implemented`);
+            }            
         }
         else {
             let leftNodeId: NodeId = this.processExpression(binExpression.left);
@@ -642,13 +673,23 @@ class Analyzer {
         }
     }
 
+    private processPropertyAccessExpression(propertyAccessExpression: ts.PropertyAccessExpression): NodeId {
+        let propertyName: string = Analyzer.getIdentifierName((propertyAccessExpression.name) as ts.Identifier);
+        let expressionNodeId: NodeId = this.processExpression(propertyAccessExpression.expression);
+        let loadNodeId: NodeId = this.graph.addVertex(VertexType.Load, {property: propertyName});
+        this.nextControl(loadNodeId);
+        this.graph.addEdge(expressionNodeId, loadNodeId, "object");
+        return loadNodeId;
+    }
+
     private processParenthesizedExpression(parenthesizedExpression: ts.ParenthesizedExpression): NodeId {
         return this.processExpression(parenthesizedExpression.expression);
     }
 
     //for cases we use the identifier's value
     private processIdentifierExpression(identifierExpression: ts.Identifier): NodeId {
-        let varName: string = Analyzer.getVarName(identifierExpression);
+        let varName: string = Analyzer.getIdentifierName(identifierExpression);
+        this.lastIdentifierName = varName;
         return this.symbolTable.getIdByName(varName);
     }
 }

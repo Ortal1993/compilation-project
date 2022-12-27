@@ -278,3 +278,29 @@ export class BreakVertex extends ControlVertex {
         return this.getLabelPrefix() + "break";
     }
 }
+
+export class LoadVertex extends ControlVertex {
+    public property: string;
+
+    constructor(_property: string) {
+        super();
+        this.property = _property;
+    }
+
+    public getLabel(): string {
+        return this.getLabelPrefix() + "load " + this.property;
+    }
+}
+
+export class StoreVertex extends ControlVertex {
+    public property: string;
+
+    constructor(_property: string) {
+        super();
+        this.property = _property;
+    }
+
+    public getLabel(): string {
+        return this.getLabelPrefix() + "store " + this.property;
+    }
+}

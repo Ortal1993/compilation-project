@@ -60,15 +60,6 @@ class Scope {
         return undefined;
     }
 
-    public getEntryNameByNodeId(nodeId: NodeId): string | undefined {
-        for (let entry of this.entries) {
-            if(entry.getNodeId() === nodeId) {
-                return entry.getName();
-            }
-        }
-        return undefined;
-    }
-
     public getEntryNodeId(name: string): NodeId | undefined {
         let entry: Entry | undefined = this.getEntry(name);
         if (entry === undefined) {
@@ -167,17 +158,6 @@ export class SymbolTable {
         }
 
         throw new Error(`Symbol '${name}' does not exist in the symbol table`);
-    }
-
-    public getNameById(nodeId: NodeId): string {
-        for (let scope of this.scopes) {
-            let name: string | undefined = scope.getEntryNameByNodeId(nodeId);
-            if (name !== undefined) {
-                return name;
-            }
-        }
-
-        throw new Error(`Symbol with nodeId '${nodeId}' does not exist in the symbol table`);
     }
 
     public getCopy(varNames: Set<string> | null = null): Map<string, NodeId> {

@@ -39,5 +39,7 @@ export enum VertexType {
     Return,
     Continue,
     Break,
-    New
+    New,
+    Load,
+    Store
 }
