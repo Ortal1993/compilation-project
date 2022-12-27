@@ -10,14 +10,14 @@ digraph G {
 	8 [ label="8 | dummy" shape="rectangle" ];
 	9 [ label="9 | phi  (4)" shape="rectangle" ];
 	10 [ label="10 | +" shape="rectangle" ];
-	0 -> 2 [ label="control" ];
-	3 -> 2 [ label="condition" ];
-	2 -> 6 [ label="true-control" ];
-	6 -> 4 [ label="control" ];
-	2 -> 8 [ label="false-control" ];
-	8 -> 4 [ label="control" ];
-	5 -> 9 [ label="from 6" ];
-	1 -> 9 [ label="from 8" ];
-	5 -> 10 [ label="right" ];
-	9 -> 10 [ label="left" ];
+	0 -> 2 [ label="control", style="solid" ];
+	3 -> 2 [ label="condition", style="solid" ];
+	2 -> 6 [ label="true-control", style="solid" ];
+	6 -> 4 [ label="control", style="solid" ];
+	2 -> 8 [ label="false-control", style="solid" ];
+	8 -> 4 [ label="control", style="solid" ];
+	5 -> 9 [ label="from 6", style="solid" ];
+	1 -> 9 [ label="from 8", style="solid" ];
+	5 -> 10 [ label="right", style="solid" ];
+	9 -> 10 [ label="left", style="solid" ];
 }

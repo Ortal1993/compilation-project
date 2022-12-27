@@ -7,6 +7,6 @@ digraph G {
 	5 [ label="5 | hello world" shape="rectangle" ];
 	6 [ label="6 | true" shape="rectangle" ];
 	7 [ label="7 | false" shape="rectangle" ];
-	1 -> 2 [ label="right" ];
-	1 -> 2 [ label="left" ];
+	1 -> 2 [ label="right", style="solid" ];
+	1 -> 2 [ label="left", style="solid" ];
 }
