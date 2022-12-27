@@ -1,5 +1,5 @@
 import * as ts from "typescript";
-import { Graph, Edge } from "./graph";
+import { Graph, EdgeType, Edge } from "./graph";
 import { SymbolTable } from "./symbolTable";
 import { ConstTable } from "./constTable";
 import { NodeId, VertexType, BinaryOperation, UnaryOperation } from "./types";
@@ -257,7 +257,7 @@ class Analyzer {
         });
 
         let startNodeId: NodeId = this.processExpression(callExpression.expression);//callExpression.expression - name of function
-        this.graph.addEdge(callNodeId, startNodeId, "call");
+        this.graph.addEdge(callNodeId, startNodeId, "call", EdgeType.InterFunction);
 
         return callNodeId;
     }
