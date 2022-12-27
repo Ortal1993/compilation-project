@@ -41,20 +41,30 @@ def parse_args():
     return args
 
 
+class Format:
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    BOLD = '\033[1m'
+    _END = '\033[0m'
+
+
 class Log:
     _DEFAULT_EXIT_CODE = 1
 
     def __init__(self):
-        self.info_prefix = 'INFO:'
-        self.error_prefix = 'ERROR:'
+        self.info_prefix = 'INFO: '
+        self.error_prefix = 'ERROR: '
         self.command_prefix = '>>'
 
-    def info(self, msg, new_line=True, prefix=True):
-        full_msg = (self.info_prefix + ' ' + msg) if prefix else msg
+    def info(self, msg, new_line=True, prefix=True, format=None):
+        full_msg = (f'{self.info_prefix}{msg}') if prefix else msg
+        if format is not None:
+            full_msg = f'{"".join(format)}{full_msg}{Format._END}'
         print(full_msg, end='\n' if new_line else '')
 
     def error(self, msg, exit_code=_DEFAULT_EXIT_CODE):
-        print(self.error_prefix, msg)
+        print(f'{Format.RED}{Format.BOLD}{self.error_prefix}{msg}{Format._END}')
         sys.exit(exit_code)
 
     def command(self, msg, cmd):
@@ -128,7 +138,7 @@ class Stages:
             self.log.error('Build failed', e.returncode)
         else:
             if self.cfg.verbose:
-                self.log.info('Build finished successfully')
+                self.log.info('Build finished successfully', format=[Format.GREEN])
 
     def run(self):
         if self.cfg.test:
@@ -157,11 +167,10 @@ class Stages:
             self.log.error('Analyzer failed', e.returncode)
         else:
             if self.cfg.verbose:
-                self.log.info('Analyzer finished successfully')
-                self.log.info(f'Output path: {os.path.join(self.cfg.paths.output_dir, self.cfg.output)}')
+                self.log.info('Analyzer finished successfully', format=[Format.GREEN])
+                self.log.info(f'Output path: {os.path.join(self.cfg.paths.output_dir, self.cfg.output)}', format=[Format.BOLD])
 
     def _test(self):
-        PASSED, FAILED, UPDATED, UNTOUCHED = 'PASSED', 'FAILED', 'UPDATED', 'UNTOUCHED'
         any_failed = False
         any_updated = False
 
@@ -171,50 +180,64 @@ class Stages:
         self._create_output_directory()
 
         for index, sample in samples:
-            failed = False
-            updated = False
-            self.cfg.output = f'graph_{index}.txt'
-            run_cmd = self._get_run_command([sample])
-            if self.cfg.verbose:
-                self.log.info(f'Running sample {index}', new_line=False)
-            try:
-                subprocess.run(run_cmd, check=True)
-            except subprocess.CalledProcessError as e:
-                failed = True
-            else:
-                if self.cfg.update_goldens:
-                    updated = self._update_golden(index)
-                else:
-                    failed = self._is_diff(index)
+            failed, updated = self._run_single_test(index, sample)
 
-            if not failed:
-                os.remove(os.path.join(self.cfg.paths.output_dir, self.cfg.output))
-
-            if self.cfg.verbose:
-                if failed:
-                    self.log.info(f'\t\t{FAILED}', prefix=False)
-                if self.cfg.update_goldens:
-                    if updated:
-                        self.log.info(f'\t\t{UPDATED}', prefix=False)
-                    else:
-                        self.log.info(f'\t\t{UNTOUCHED}', prefix=False)
-                if not failed and not self.cfg.update_goldens:
-                    self.log.info(f'\t\t{PASSED}', prefix=False)
-            
             any_failed = any_failed or failed
             any_updated = any_updated or updated
 
-        if self.cfg.update_goldens:
-            if any_updated:
-                result = UPDATED
-            else:
-                result = UNTOUCHED
+        self._print_test_results(any_updated, any_failed)
+
+    def _run_single_test(self, index, sample):
+        PASSED, FAILED, UPDATED, UNTOUCHED = 'PASSED', 'FAILED', 'UPDATED', 'UNTOUCHED'
+        failed = False
+        updated = False
+        self.cfg.output = f'graph_{index}.txt'
+        run_cmd = self._get_run_command([sample])
+
+        if self.cfg.verbose:
+            self.log.info(f'Running sample {index}', new_line=False)
+        try:
+            subprocess.run(run_cmd, check=True)
+        except subprocess.CalledProcessError as e:
+            failed = True
         else:
-            if any_failed:
-                result = FAILED
+            if self.cfg.update_goldens:
+                updated = self._update_golden(index)
             else:
-                result = PASSED
-        self.log.info(f'Result: {result}', prefix=False)
+                failed = self._is_diff(index)
+
+        if not failed:
+            os.remove(os.path.join(self.cfg.paths.output_dir, self.cfg.output))
+
+        if self.cfg.verbose:
+            if failed:
+                self.log.info(f'\t\t{FAILED}', prefix=False, format=[Format.RED])
+            if self.cfg.update_goldens:
+                if updated:
+                    self.log.info(f'\t\t{UPDATED}', prefix=False, format=[Format.YELLOW])
+                else:
+                    self.log.info(f'\t\t{UNTOUCHED}', prefix=False, format=[Format.GREEN])
+            if not failed and not self.cfg.update_goldens:
+                self.log.info(f'\t\t{PASSED}', prefix=False, format=[Format.GREEN])
+
+        return failed, updated
+
+    def _print_test_results(self, updated, failed):
+        PASSED, FAILED, UPDATED, UNTOUCHED = 'PASSED', 'FAILED', 'UPDATED', 'UNTOUCHED'
+
+        if self.cfg.update_goldens:
+            if updated:
+                result, format = UPDATED, [Format.YELLOW]
+            else:
+                result, format = UNTOUCHED, [Format.GREEN]
+        else:
+            if failed:
+                result, format = FAILED, [Format.RED]
+            else:
+                result, format = PASSED, [Format.GREEN]
+        format.append(Format.BOLD)
+
+        self.log.info(f'Result: {result}', prefix=False, format=format)
 
     def _update_golden(self, index):
         output = os.path.join(self.cfg.paths.output_dir, self.cfg.output)
@@ -301,7 +324,6 @@ class Stages:
                 samples.append((sample_index, sample_file))
 
         return samples
-                    
 
     def _create_output_directory(self):
         if self.cfg.verbose:
