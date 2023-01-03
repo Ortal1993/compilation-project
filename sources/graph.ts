@@ -2,8 +2,8 @@ import { NodeId, VertexType, BinaryOperation, UnaryOperation } from "./types";
 import * as vertex from "./vertex";
 
 export class Graph {
-    private edges: Array<Edge>;
-    private vertices: Map<NodeId, vertex.Vertex>;
+    public edges: Array<Edge>;
+    public vertices: Map<NodeId, vertex.Vertex>;
 
     public constructor() {
         this.edges = new Array<Edge>();
@@ -133,8 +133,8 @@ export class Graph {
 }
 
 export enum EdgeKind {
-    Control,
-    Data
+    Control = "control",
+    Data = "data"
 };
 
 export class Edge {
