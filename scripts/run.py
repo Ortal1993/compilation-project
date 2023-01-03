@@ -124,13 +124,10 @@ class Stages:
                 self.log.info('Skipping build stage')
             return
 
-        compiler = 'tsc'
-        sources = self._collect_sources()
-        output_dir_flag = ['--outDir', self.cfg.paths.build_dir]
-        build_cmd = [compiler] + sources + output_dir_flag
+        build_cmd = 'tsc'
 
         if self.cfg.verbose:
-            self.log.command('Running build command', ' '.join(build_cmd))
+            self.log.command('Running build command', build_cmd)
 
         try:
             subprocess.run(build_cmd, check=True)
