@@ -8,14 +8,14 @@ export enum EdgeType {
 };
 
 export enum EdgeKind {
-    Control,
-    Data,
-    Association
+    Control = "control",
+    Data = "data",
+    Association = "association"
 };
 
 export class Graph {
-    private edges: Array<Edge>;
-    private vertices: Map<NodeId, vertex.Vertex>;
+    public edges: Array<Edge>;
+    public vertices: Map<NodeId, vertex.Vertex>;
 
     public constructor() {
         this.edges = new Array<Edge>();
