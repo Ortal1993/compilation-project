@@ -26,11 +26,11 @@ export class Graph {
         }
     }
 
-    public addEdge(srcId: NodeId, dstId: NodeId, type: string): void {
+    public addEdge(srcId: NodeId, dstId: NodeId, kind: EdgeKind, label: string): void {
         this.checkVertexId(srcId);
         this.checkVertexId(dstId);
 
-        let newEdge: Edge = new Edge(srcId, dstId, type);
+        let newEdge: Edge = new Edge(srcId, dstId, kind, label);
         this.edges.push(newEdge);
     }
 
@@ -105,7 +105,7 @@ export class Graph {
     public print(humanFormat: boolean = false, filename: string | null = null): void {
         let content: string = "";
         if (humanFormat) {
-            this.edges.forEach(edge => {content += `source: ${edge.srcId}, dest: ${edge.dstId}, type: ${edge.type}`});
+            this.edges.forEach(edge => {content += `source: ${edge.srcId}, dest: ${edge.dstId}, type: ${edge.label}`});
             this.vertices.forEach(vertex => {content += `id: ${vertex.id}`});
         }
         else {
@@ -114,7 +114,7 @@ export class Graph {
                 content += `\t${vertex.id} [ label="${vertex.getLabel()}" shape="rectangle" ];\n`
             });
             this.edges.forEach(edge => {
-                content += `\t${edge.srcId} -> ${edge.dstId} [ label="${edge.type}" ];\n`
+                content += `\t${edge.srcId} -> ${edge.dstId} [ label="${edge.label}" ];\n`
             });
             content += "}\n";
         }
@@ -132,14 +132,16 @@ export class Graph {
     }
 }
 
-export class Edge {
-    public srcId: NodeId;
-    public dstId: NodeId;
-    public type: string;
+export enum EdgeKind {
+    Control,
+    Data
+};
 
-    public constructor(_srcId: NodeId, _dstId: NodeId, _type: string) {
-        this.srcId = _srcId;
-        this.dstId = _dstId;
-        this.type = _type;
-    }
+export class Edge {
+    public constructor(
+        public srcId: NodeId,
+        public dstId: NodeId,
+        public kind: EdgeKind,
+        public label: string
+    ) {};
 }
