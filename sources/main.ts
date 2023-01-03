@@ -541,6 +541,9 @@ class Analyzer {
             case ts.SyntaxKind.PropertyAccessExpression:
                 expNodeId = this.processPropertyAccessExpression(expression as ts.PropertyAccessExpression);
                 break;
+            case ts.SyntaxKind.ElementAccessExpression:
+                expNodeId = this.processElementAccessExpression(expression as ts.ElementAccessExpression);
+                break;
             case ts.SyntaxKind.ThisKeyword:
                 expNodeId = this.processThisExpression(expression as ts.ThisExpression);
                 break;
@@ -652,24 +655,22 @@ class Analyzer {
         if (isAssignOperation) {
             // for cases a variable that is already defined is being re-assigned
             let leftExpression: ts.Expression = binExpression.left;
-            switch (leftExpression.kind) {
-                case ts.SyntaxKind.PropertyAccessExpression:
-                    let propertyName: string = Analyzer.getIdentifierName(((leftExpression as ts.PropertyAccessExpression).name) as ts.Identifier);
-                    let propertyNodeId: NodeId = this.graph.addVertex(VertexType.Symbol, {name: propertyName});
-                    let expressionNodeId: NodeId = this.processExpression((leftExpression as ts.PropertyAccessExpression).expression);
-                    let storeNodeId: NodeId = this.graph.addVertex(VertexType.Store);
-                    this.graph.addEdge(rightNodeId, storeNodeId, "value");
-                    this.graph.addEdge(expressionNodeId, storeNodeId, "object");
-                    this.graph.addEdge(propertyNodeId, storeNodeId, "property");
-                    this.nextControl(storeNodeId);
-                    return storeNodeId;
-                case ts.SyntaxKind.Identifier:
-                    let varName: string = (binExpression.left as any).escapedText;
-                    this.symbolTable.updateNodeId(varName, rightNodeId);
-                    return rightNodeId;
-                default:
-                    throw new Error(`not implemented`);
-            }            
+            if (leftExpression.kind === ts.SyntaxKind.PropertyAccessExpression) {
+                let [objectNodeId, propertyNodeId]: [NodeId, NodeId] = this.getPropertyAccessArguments(leftExpression as ts.PropertyAccessExpression);
+                return this.createStoreNode(rightNodeId, objectNodeId, propertyNodeId);
+            }
+            else if (leftExpression.kind === ts.SyntaxKind.ElementAccessExpression) {
+                let [objectNodeId, propertyArgumentNodeId] : [NodeId, NodeId] = this.getElementAccessArguments(leftExpression as ts.ElementAccessExpression);
+                return this.createStoreNode(rightNodeId, objectNodeId, propertyArgumentNodeId);
+            }
+            else if (leftExpression.kind === ts.SyntaxKind.Identifier) {
+                let varName: string = (binExpression.left as any).escapedText;
+                this.symbolTable.updateNodeId(varName, rightNodeId);
+                return rightNodeId;
+            }
+            else {
+                throw new Error(`not implemented`);
+            }
         }
         else {
             let leftNodeId: NodeId = this.processExpression(binExpression.left);
@@ -680,15 +681,48 @@ class Analyzer {
         }
     }
 
-    private processPropertyAccessExpression(propertyAccessExpression: ts.PropertyAccessExpression): NodeId {
+    private getPropertyAccessArguments(propertyAccessExpression: ts.PropertyAccessExpression): [NodeId, NodeId] {
         let propertyName: string = Analyzer.getIdentifierName((propertyAccessExpression.name) as ts.Identifier);
         let properyNodeId: NodeId = this.graph.addVertex(VertexType.Symbol, {name: propertyName});
-        let expressionNodeId: NodeId = this.processExpression(propertyAccessExpression.expression);
+        let objectNodeId: NodeId = this.processExpression(propertyAccessExpression.expression);
+        return [objectNodeId, properyNodeId];
+    }
+
+    private getElementAccessArguments(elementAccessExpression: ts.ElementAccessExpression): [NodeId, NodeId] {
+        let propertyArgumentNodeId: NodeId = this.processExpression(elementAccessExpression.argumentExpression);
+        let objectNodeId: NodeId = this.processExpression(elementAccessExpression.expression);
+        return [objectNodeId, propertyArgumentNodeId];
+    }
+
+    private createStoreNode(valueNodeId: NodeId, objectNodeId: NodeId, propertyNodeId: NodeId): NodeId {
+        let storeNodeId: NodeId = this.graph.addVertex(VertexType.Store);
+        this.nextControl(storeNodeId);
+
+        this.graph.addEdge(valueNodeId, storeNodeId, "value");
+        this.graph.addEdge(objectNodeId, storeNodeId, "object");
+        this.graph.addEdge(propertyNodeId, storeNodeId, "property");
+
+        return storeNodeId;
+    }
+
+    private createLoadNode(objectNodeId: NodeId, propertyNodeId: NodeId): NodeId {
         let loadNodeId: NodeId = this.graph.addVertex(VertexType.Load);
         this.nextControl(loadNodeId);
-        this.graph.addEdge(properyNodeId, loadNodeId, "property");
-        this.graph.addEdge(expressionNodeId, loadNodeId, "object");
+
+        this.graph.addEdge(objectNodeId, loadNodeId, "object");
+        this.graph.addEdge(propertyNodeId, loadNodeId, "property");
+
         return loadNodeId;
+    }
+
+    private processPropertyAccessExpression(propertyAccessExpression: ts.PropertyAccessExpression): NodeId {
+        let [objectNodeId, properyNodeId] : [NodeId, NodeId] = this.getPropertyAccessArguments(propertyAccessExpression);
+        return this.createLoadNode(objectNodeId, properyNodeId);
+    }
+    
+    private processElementAccessExpression(elementAccessExpression: ts.ElementAccessExpression) :NodeId {
+        let [objectNodeId, propertyArgumentNodeId] : [NodeId, NodeId] = this.getElementAccessArguments(elementAccessExpression);
+        return this.createLoadNode(objectNodeId, propertyArgumentNodeId);
     }
 
     private processParenthesizedExpression(parenthesizedExpression: ts.ParenthesizedExpression): NodeId {

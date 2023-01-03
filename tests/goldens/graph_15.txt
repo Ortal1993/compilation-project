@@ -40,12 +40,12 @@ digraph G {
 	13 -> 17 [ label="true-control" ];
 	13 -> 18 [ label="false-control" ];
 	18 -> 16 [ label="control" ];
+	1 -> 19 [ label="callable" ];
 	16 -> 19 [ label="control" ];
-	19 -> 1 [ label="call" ];
 	19 -> 5 [ label="control" ];
+	2 -> 20 [ label="callable" ];
 	4 -> 20 [ label="false-control" ];
 	17 -> 20 [ label="control" ];
-	20 -> 2 [ label="call" ];
 	1 -> 21 [ label="control" ];
 	8 -> 21 [ label="value" ];
 	2 -> 22 [ label="control" ];

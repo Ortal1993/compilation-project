@@ -14,9 +14,9 @@ digraph G {
 	12 [ label="12 | call" shape="rectangle" ];
 	13 [ label="13 | -" shape="rectangle" ];
 	14 [ label="14 | *" shape="rectangle" ];
-	0 -> 2 [ label="control" ];
 	3 -> 2 [ label="pos: 1" ];
-	2 -> 1 [ label="call" ];
+	1 -> 2 [ label="callable" ];
+	0 -> 2 [ label="control" ];
 	1 -> 5 [ label="control" ];
 	6 -> 7 [ label="right" ];
 	4 -> 7 [ label="left" ];
@@ -29,7 +29,7 @@ digraph G {
 	6 -> 13 [ label="right" ];
 	4 -> 13 [ label="left" ];
 	13 -> 12 [ label="pos: 1" ];
-	12 -> 1 [ label="call" ];
+	1 -> 12 [ label="callable" ];
 	12 -> 14 [ label="right" ];
 	4 -> 14 [ label="left" ];
 	14 -> 11 [ label="value" ];
