@@ -41,5 +41,6 @@ export enum VertexType {
     Break,
     New,
     Load,
-    Store
+    Store,
+    Symbol
 }
