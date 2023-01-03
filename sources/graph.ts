@@ -5,7 +5,13 @@ import * as vertex from "./vertex";
 export enum EdgeType {
     Standard,
     Association
-}
+};
+
+export enum EdgeKind {
+    Control,
+    Data,
+    Association
+};
 
 export class Graph {
     private edges: Array<Edge>;
@@ -43,11 +49,11 @@ export class Graph {
         }
     }
 
-    public addEdge(srcId: NodeId, dstId: NodeId, label: string, type: EdgeType = EdgeType.Standard): void {
+    public addEdge(srcId: NodeId, dstId: NodeId, kind: EdgeKind, label: string, type: EdgeType = EdgeType.Standard): void {
         this.checkVertexId(srcId);
         this.checkVertexId(dstId);
 
-        let newEdge: Edge = new Edge(srcId, dstId, label, type);
+        let newEdge: Edge = new Edge(srcId, dstId, kind, label, type);
         this.edges.push(newEdge);
     }
 
@@ -125,7 +131,7 @@ export class Graph {
     public print(humanFormat: boolean = false, filename: string | null = null): void {
         let content: string = "";
         if (humanFormat) {
-            this.edges.forEach(edge => {content += `source: ${edge.srcId}, dest: ${edge.dstId}, type: ${edge.type}`});
+            this.edges.forEach(edge => {content += `source: ${edge.srcId}, dest: ${edge.dstId}, type: ${edge.label}`});
             this.vertices.forEach(vertex => {content += `id: ${vertex.id}`});
         }
         else {
@@ -152,17 +158,12 @@ export class Graph {
     }
 }
 
-
 export class Edge {
-    public srcId: NodeId;
-    public dstId: NodeId;
-    public label: string;
-    public type: EdgeType;
-
-    public constructor(_srcId: NodeId, _dstId: NodeId, _label: string, _type: EdgeType) {
-        this.srcId = _srcId;
-        this.dstId = _dstId;
-        this.label = _label;
-        this.type = _type;
-    }
+    public constructor(
+        public srcId: NodeId,
+        public dstId: NodeId,
+        public kind: EdgeKind,
+        public label: string,
+        public type: EdgeType
+    ) {};
 }

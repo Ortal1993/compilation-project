@@ -1,5 +1,5 @@
 import * as ts from "typescript";
-import { Graph, Edge, EdgeType } from "./graph";
+import { Graph, Edge, EdgeType, EdgeKind } from "./graph";
 import { SymbolTable } from "./symbolTable";
 import { ConstTable } from "./constTable";
 import { NodeId, VertexType, BinaryOperation, UnaryOperation } from "./types";
@@ -76,7 +76,7 @@ class Analyzer {
             let isBranchVertex = currentControlVertex instanceof vertex.IfVertex ||
                                  currentControlVertex instanceof vertex.WhileVertex;
             let edgeLabel: string = isBranchVertex ? String(this.currentBranchType) + "-control" : "control";
-            this.graph.addEdge(this.controlVertex, nextControlId, edgeLabel);
+            this.graph.addEdge(this.controlVertex, nextControlId, EdgeKind.Control, edgeLabel);
         }
         this.controlVertex = nextControlId;
 
@@ -88,7 +88,7 @@ class Analyzer {
     private backpatchBreakEdges(): void {
         let currentBreakList: Array<NodeId> = this.breakStack[0];
         for (let breakNodeId of currentBreakList) {
-            this.graph.addEdge(breakNodeId, this.controlVertex, "control");
+            this.graph.addEdge(breakNodeId, this.controlVertex, EdgeKind.Control, "control");
         }
         this.breakStack.shift(); // pop the last break list
     }
@@ -146,7 +146,7 @@ class Analyzer {
         parametersList.forEach((parameter: ts.ParameterDeclaration, position: number) => {
             let parameterName: string = (parameter.name as any).escapedText;
             let parameterNodeId: NodeId = this.graph.addVertex(VertexType.Parameter, {pos: position + 1});
-            this.graph.addEdge(parameterNodeId, startNodeId, "association", EdgeType.Association);
+            this.graph.addEdge(parameterNodeId, startNodeId, EdgeKind.Association, "association", EdgeType.Association);
             this.symbolTable.addSymbol(parameterName, parameterNodeId, false, true);
         });
     }
@@ -159,7 +159,7 @@ class Analyzer {
             let funcName: string = (funcDeclaration.name as any).escapedText;
             let funcStartNodeId: NodeId = this.graph.addVertex(VertexType.Start, {name: funcName});
             let funcSymbolNodeId: NodeId = this.symbolTable.getIdByName(funcName);
-            this.graph.addEdge(funcStartNodeId, funcSymbolNodeId, "association", EdgeType.Association);
+            this.graph.addEdge(funcStartNodeId, funcSymbolNodeId, EdgeKind.Association, "association", EdgeType.Association);
             this.controlVertex = funcStartNodeId;
 
             this.symbolTable.addNewScope();
@@ -222,7 +222,7 @@ class Analyzer {
         this.functionsStack.unshift(methodStartNodeId);
 
         let thisNodeId: NodeId = this.graph.addVertex(VertexType.Parameter, {pos: 0, funcId: methodStartNodeId});
-        this.graph.addEdge(thisNodeId, methodStartNodeId, "association", EdgeType.Association);
+        this.graph.addEdge(thisNodeId, methodStartNodeId, EdgeKind.Association, "association", EdgeType.Association);
         this.symbolTable.addSymbol('this', thisNodeId, false, true);
         this.processParameters(methodDecl.parameters, methodStartNodeId);
 
@@ -262,11 +262,11 @@ class Analyzer {
 
         callExpression.arguments.forEach((argument, pos) => {
             let argumentNodeId: NodeId = this.processExpression(argument);
-            this.graph.addEdge(argumentNodeId, callNodeId, "pos: " + String(pos + 1));
+            this.graph.addEdge(argumentNodeId, callNodeId, EdgeKind.Data, "pos: " + String(pos + 1));
         });
 
         let callableExpNodeId: NodeId = this.processExpression(callExpression.expression);
-        this.graph.addEdge(callableExpNodeId, callNodeId, "callable");
+        this.graph.addEdge(callableExpNodeId, callNodeId, EdgeKind.Data, "callable");
         this.nextControl(callNodeId);
 
         return callNodeId;
@@ -279,13 +279,13 @@ class Analyzer {
         if (newExpression.arguments !== undefined) {
             newExpression.arguments.forEach((argument, pos) => {
                 let argumentNodeId: NodeId = this.processExpression(argument);
-                this.graph.addEdge(argumentNodeId, newNodeId, "pos: " + String(pos + 1));
+                this.graph.addEdge(argumentNodeId, newNodeId, EdgeKind.Data, "pos: " + String(pos + 1));
             });
         }
 
         let constructorName: string = className + "::constructor";
         let constructorNodeId: NodeId = this.symbolTable.getIdByName(constructorName);
-        this.graph.addEdge(constructorNodeId, newNodeId, "callable");
+        this.graph.addEdge(constructorNodeId, newNodeId, EdgeKind.Data, "callable");
         this.nextControl(newNodeId);
         return newNodeId;
     }
@@ -335,7 +335,7 @@ class Analyzer {
     private processContinueStatement(continueStatement: ts.ContinueStatement): void {
         let continueNodeId: NodeId = this.graph.addVertex(VertexType.Continue);
         this.nextControl(continueNodeId);
-        this.graph.addEdge(continueNodeId, this.whileStack[0], "control");
+        this.graph.addEdge(continueNodeId, this.whileStack[0], EdgeKind.Control, "control");
     }
 
     private processBreakStatement(breakStatement: ts.BreakStatement): void {
@@ -348,7 +348,7 @@ class Analyzer {
         let preMergeControlVertex: NodeId = this.controlVertex;
         let whileNodeId: NodeId = this.graph.addVertex(VertexType.While);
         let mergeNodeId: NodeId = this.graph.addVertex(VertexType.Merge);
-        this.graph.addEdge(whileNodeId, mergeNodeId, "association", EdgeType.Association);
+        this.graph.addEdge(whileNodeId, mergeNodeId, EdgeKind.Association, "association", EdgeType.Association);
 
         this.whileStack.unshift(mergeNodeId);
         this.breakStack.unshift(new Array<NodeId>()); // the list is popped right after backpatching it inside nextControl()
@@ -357,7 +357,7 @@ class Analyzer {
         let [previousPatchingVariablesCounter, patchingIdToVarName] = this.prepareForWhileStatementPatching(symbolTableCopy);
 
         let expNodeId: NodeId = this.processExpression(whileStatement.expression);
-        this.graph.addEdge(expNodeId, whileNodeId, "condition");
+        this.graph.addEdge(expNodeId, whileNodeId, EdgeKind.Data, "condition");
         this.currentBranchType = true;
         this.nextControl(mergeNodeId);
         this.nextControl(whileNodeId);
@@ -384,12 +384,12 @@ class Analyzer {
         let ifNodeId: NodeId = this.graph.addVertex(VertexType.If);
         this.nextControl(ifNodeId);
         
-        this.graph.addEdge(expNodeId, ifNodeId, "condition");
+        this.graph.addEdge(expNodeId, ifNodeId, EdgeKind.Data, "condition");
 
         let symbolTableCopy: Map<string, NodeId> = this.symbolTable.getCopy();
 
         let mergeNodeId: NodeId = this.graph.addVertex(VertexType.Merge);
-        this.graph.addEdge(ifNodeId, mergeNodeId, "association", EdgeType.Association);
+        this.graph.addEdge(ifNodeId, mergeNodeId, EdgeKind.Association, "association", EdgeType.Association);
 
         this.currentBranchType = true;
         this.processBranchBlockWrapper(ifStatement.thenStatement);
@@ -455,19 +455,19 @@ class Analyzer {
             }
             else {
                 let phiNodeId: NodeId = this.graph.addVertex(VertexType.Phi, {mergeId: mergeNodeId});
-                this.graph.addEdge(phiNodeId, mergeNodeId, "association", EdgeType.Association);
+                this.graph.addEdge(phiNodeId, mergeNodeId, EdgeKind.Association, "association", EdgeType.Association);
 
                 if (trueBranchNodeId && falseBranchNodeId) {
-                    this.graph.addEdge(trueBranchNodeId, phiNodeId, phiEdgesLabels.true);
-                    this.graph.addEdge(falseBranchNodeId, phiNodeId, phiEdgesLabels.false);
+                    this.graph.addEdge(trueBranchNodeId, phiNodeId, EdgeKind.Data, phiEdgesLabels.true);
+                    this.graph.addEdge(falseBranchNodeId, phiNodeId, EdgeKind.Data, phiEdgesLabels.false);
                 }
                 else if (trueBranchNodeId) {
-                    this.graph.addEdge(trueBranchNodeId, phiNodeId, phiEdgesLabels.true);
-                    this.graph.addEdge(nodeId, phiNodeId, phiEdgesLabels.false);
+                    this.graph.addEdge(trueBranchNodeId, phiNodeId, EdgeKind.Data, phiEdgesLabels.true);
+                    this.graph.addEdge(nodeId, phiNodeId, EdgeKind.Data, phiEdgesLabels.false);
                 }
                 else if (falseBranchNodeId) {
-                    this.graph.addEdge(falseBranchNodeId, phiNodeId, phiEdgesLabels.false);
-                    this.graph.addEdge(nodeId, phiNodeId, phiEdgesLabels.true);
+                    this.graph.addEdge(falseBranchNodeId, phiNodeId, EdgeKind.Data, phiEdgesLabels.false);
+                    this.graph.addEdge(nodeId, phiNodeId, EdgeKind.Data, phiEdgesLabels.true);
                 }
                 else {
                     // TODO: assert (remove after testing)
@@ -481,12 +481,12 @@ class Analyzer {
     private processReturnStatement(retStatement: ts.ReturnStatement): void {
         let currentFuncNodeId: NodeId = this.functionsStack[0];
         let returnNodeId: NodeId = this.graph.addVertex(VertexType.Return);
-        this.graph.addEdge(returnNodeId, currentFuncNodeId, "association", EdgeType.Association);
+        this.graph.addEdge(returnNodeId, currentFuncNodeId, EdgeKind.Association, "association", EdgeType.Association);
         this.nextControl(returnNodeId);
 
         if (retStatement.expression !== undefined) {
             let expNodeId: NodeId = this.processExpression(retStatement.expression);
-            this.graph.addEdge(expNodeId, returnNodeId, "value")
+            this.graph.addEdge(expNodeId, returnNodeId, EdgeKind.Data, "value")
         }
     }
 
@@ -609,7 +609,7 @@ class Analyzer {
         this.functionsStack.unshift(funcStartNodeId);
 
         let thisNodeId: NodeId = this.graph.addVertex(VertexType.Parameter, {pos: 0});
-        this.graph.addEdge(thisNodeId, funcStartNodeId, "association", EdgeType.Association);
+        this.graph.addEdge(thisNodeId, funcStartNodeId, EdgeKind.Association, "association", EdgeType.Association);
         this.symbolTable.addSymbol('this', thisNodeId, false, true);
         this.processParameters(funcExp.parameters, funcStartNodeId);
         this.processBlockStatements((funcExp.body as ts.Block).statements);
@@ -661,7 +661,7 @@ class Analyzer {
                 throw new Error(`not implemented`);
         }
         let operationNodeId: NodeId = this.graph.addVertex(VertexType.UnaryOperation, {operation: unaryOperation});
-        this.graph.addEdge(expNodeId, operationNodeId, "prefix");
+        this.graph.addEdge(expNodeId, operationNodeId, EdgeKind.Data, "prefix");
         return operationNodeId;
     }
 
@@ -744,8 +744,8 @@ class Analyzer {
         else {
             let leftNodeId: NodeId = this.processExpression(binExpression.left);
             let operationNodeId: NodeId = this.graph.addVertex(VertexType.BinaryOperation, {operation: binaryOperation});
-            this.graph.addEdge(rightNodeId, operationNodeId, "right");
-            this.graph.addEdge(leftNodeId, operationNodeId, "left");
+            this.graph.addEdge(rightNodeId, operationNodeId, EdgeKind.Data, "right");
+            this.graph.addEdge(leftNodeId, operationNodeId, EdgeKind.Data, "left");
             return operationNodeId;
         }
     }
@@ -767,9 +767,9 @@ class Analyzer {
         let storeNodeId: NodeId = this.graph.addVertex(VertexType.Store);
         this.nextControl(storeNodeId);
 
-        this.graph.addEdge(valueNodeId, storeNodeId, "value");
-        this.graph.addEdge(objectNodeId, storeNodeId, "object");
-        this.graph.addEdge(propertyNodeId, storeNodeId, "property");
+        this.graph.addEdge(valueNodeId, storeNodeId, EdgeKind.Data, "value");
+        this.graph.addEdge(objectNodeId, storeNodeId, EdgeKind.Data, "object");
+        this.graph.addEdge(propertyNodeId, storeNodeId, EdgeKind.Data, "property");
 
         return storeNodeId;
     }
@@ -778,8 +778,8 @@ class Analyzer {
         let loadNodeId: NodeId = this.graph.addVertex(VertexType.Load);
         this.nextControl(loadNodeId);
 
-        this.graph.addEdge(objectNodeId, loadNodeId, "object");
-        this.graph.addEdge(propertyNodeId, loadNodeId, "property");
+        this.graph.addEdge(objectNodeId, loadNodeId, EdgeKind.Data, "object");
+        this.graph.addEdge(propertyNodeId, loadNodeId, EdgeKind.Data, "property");
 
         return loadNodeId;
     }
