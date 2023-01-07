@@ -550,6 +550,9 @@ class Analyzer {
             case ts.SyntaxKind.ArrayLiteralExpression:
                 expNodeId = this.processArrayLiteralExpression(expression as ts.ArrayLiteralExpression);
                 break;
+            case ts.SyntaxKind.ObjectLiteralExpression:
+                expNodeId = this.processObjectLiteralExpression(expression as ts.ObjectLiteralExpression);
+                break;
             default:
                 throw new Error(`not implemented`);
         }
@@ -564,6 +567,20 @@ class Analyzer {
             let expNodeId: NodeId = this.processExpression(element);
             let indexNodeId: NodeId = this.graph.addVertex(VertexType.Symbol, {name: String(index)});
             this.createStoreNode(expNodeId, newNodeId, indexNodeId);
+        });
+
+        return newNodeId;
+    }
+
+    private processObjectLiteralExpression(objectLiteralExp: ts.ObjectLiteralExpression): NodeId {
+        let newNodeId: NodeId = this.graph.addVertex(VertexType.New, {name: "Object"});
+        this.nextControl(newNodeId);
+
+        objectLiteralExp.properties.forEach((newProperty: ts.ObjectLiteralElementLike) => {
+            let expNodeId: NodeId = this.processExpression((newProperty as ts.PropertyAssignment).initializer);
+            let propertyName: String = Analyzer.getIdentifierName((newProperty as ts.PropertyAssignment).name);
+            let propertyNodeId: NodeId = this.graph.addVertex(VertexType.Symbol, {name: propertyName});
+            this.createStoreNode(expNodeId, newNodeId, propertyNodeId);
         });
 
         return newNodeId;
