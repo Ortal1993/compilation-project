@@ -271,7 +271,7 @@ class Analyzer {
 
     private processNewExpression(newExpression: ts.NewExpression): NodeId {
         let className: string = Analyzer.getIdentifierName(newExpression.expression as ts.Identifier);
-        let newNodeId: NodeId = this.graph.addVertex(VertexType.New, {name: className})
+        let newNodeId: NodeId = this.graph.addVertex(VertexType.New, {name: className});
 
         if (newExpression.arguments !== undefined) {
             newExpression.arguments.forEach((argument, pos) => {
@@ -547,10 +547,26 @@ class Analyzer {
             case ts.SyntaxKind.ThisKeyword:
                 expNodeId = this.processThisExpression(expression as ts.ThisExpression);
                 break;
+            case ts.SyntaxKind.ArrayLiteralExpression:
+                expNodeId = this.processArrayLiteralExpression(expression as ts.ArrayLiteralExpression);
+                break;
             default:
                 throw new Error(`not implemented`);
         }
         return expNodeId;
+    }
+
+    private processArrayLiteralExpression(arrayLiteralExp: ts.ArrayLiteralExpression): NodeId {
+        let newNodeId: NodeId = this.graph.addVertex(VertexType.New, {name: "Array"});
+        this.nextControl(newNodeId);
+
+        arrayLiteralExp.elements.forEach((element: ts.Expression, index: number) => {
+            let expNodeId: NodeId = this.processExpression(element);
+            let indexNodeId: NodeId = this.graph.addVertex(VertexType.Symbol, {name: String(index)});
+            this.createStoreNode(expNodeId, newNodeId, indexNodeId);
+        });
+
+        return newNodeId;
     }
 
     private processThisExpression(thisExpression: ts.ThisExpression): NodeId {
