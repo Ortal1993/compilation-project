@@ -36,11 +36,11 @@ digraph G {
 	34 [ label="34 | DONE!" shape="rectangle" ];
 	4 -> 5 [ label="prefix" ];
 	6 -> 7 [ label="prefix" ];
-	0 -> 10 [ label="control" ];
-	10 -> 9 [ label="control" ];
 	11 -> 12 [ label="right" ];
 	22 -> 12 [ label="left" ];
 	12 -> 9 [ label="condition" ];
+	0 -> 10 [ label="control" ];
+	10 -> 9 [ label="control" ];
 	22 -> 13 [ label="pos: 1" ];
 	1 -> 13 [ label="callable" ];
 	9 -> 13 [ label="true-control" ];

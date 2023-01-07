@@ -207,6 +207,8 @@ class Analyzer {
         }
 
         let methodStartNodeId: NodeId = this.graph.addVertex(VertexType.Start, {name: methodName});
+        // This symbol is not used, but adding it
+        // to the symbol table does no harm
         this.symbolTable.addSymbol(methodName, methodStartNodeId, true);
         let prevControlVertex: NodeId = this.controlVertex;
         this.controlVertex = methodStartNodeId;
@@ -345,9 +347,8 @@ class Analyzer {
         let preMergeControlVertex: NodeId = this.controlVertex;
         let whileNodeId: NodeId = this.graph.addVertex(VertexType.While)
         let mergeNodeId: NodeId = this.graph.addVertex(VertexType.Merge, {branchOriginId: whileNodeId});
-        this.nextControl(mergeNodeId);
-        this.nextControl(whileNodeId);
-        this.whileStack.unshift(whileNodeId);
+
+        this.whileStack.unshift(mergeNodeId);
         this.breakStack.unshift(new Array<NodeId>()); // the list is popped right after backpatching it inside nextControl()
 
         let symbolTableCopy: Map<string, NodeId> = this.symbolTable.getCopy();
@@ -356,6 +357,8 @@ class Analyzer {
         let expNodeId: NodeId = this.processExpression(whileStatement.expression);
         this.graph.addEdge(expNodeId, whileNodeId, "condition");
         this.currentBranchType = true;
+        this.nextControl(mergeNodeId);
+        this.nextControl(whileNodeId);
         this.processBranchBlockWrapper(whileStatement.statement);
     
         let lastTrueBranchControlVertex: NodeId = this.getLastBranchControlVertex(whileNodeId);
@@ -374,10 +377,11 @@ class Analyzer {
     }
 
     private processIfStatement(ifStatement: ts.IfStatement): void {
+        let expNodeId: NodeId = this.processExpression(ifStatement.expression);
+
         let ifNodeId: NodeId = this.graph.addVertex(VertexType.If);
         this.nextControl(ifNodeId);
-
-        let expNodeId: NodeId = this.processExpression(ifStatement.expression);
+        
         this.graph.addEdge(expNodeId, ifNodeId, "condition");
 
         let symbolTableCopy: Map<string, NodeId> = this.symbolTable.getCopy();
@@ -553,6 +557,9 @@ class Analyzer {
             case ts.SyntaxKind.ObjectLiteralExpression:
                 expNodeId = this.processObjectLiteralExpression(expression as ts.ObjectLiteralExpression);
                 break;
+            case ts.SyntaxKind.FunctionExpression:
+                expNodeId = this.processFunctionExpression(expression as ts.FunctionExpression);
+                break;
             default:
                 throw new Error(`not implemented`);
         }
@@ -584,6 +591,34 @@ class Analyzer {
         });
 
         return newNodeId;
+    }
+
+    private processFunctionExpression(funcExp: ts.FunctionExpression): NodeId {
+        let prevControlVertex: NodeId = this.controlVertex;
+
+        let funcStartNodeId: NodeId = this.graph.addVertex(VertexType.Start, {name: "__anonymousFunction__"});
+        this.controlVertex = funcStartNodeId;
+
+        this.symbolTable.addNewScope();
+        this.functionsStack.unshift(funcStartNodeId);
+
+        let thisNodeId: NodeId = this.graph.addVertex(VertexType.Parameter, {pos: 0, funcId: funcStartNodeId});
+        this.symbolTable.addSymbol('this', thisNodeId, false, true);
+        funcExp.parameters.forEach((parameter: ts.ParameterDeclaration, position: number) => {
+            let parameterName: string = (parameter.name as any).escapedText;
+            let parameterNodeId: NodeId = this.graph.addVertex(VertexType.Parameter,
+                                                                {pos: position + 1, funcId: funcStartNodeId});
+            this.symbolTable.addSymbol(parameterName, parameterNodeId, false, true);
+        });
+
+        this.processBlockStatements((funcExp.body as ts.Block).statements);
+
+        this.functionsStack.shift();
+        this.symbolTable.removeCurrentScope();
+
+        this.controlVertex = prevControlVertex;
+
+        return funcStartNodeId;
     }
 
     private processThisExpression(thisExpression: ts.ThisExpression): NodeId {

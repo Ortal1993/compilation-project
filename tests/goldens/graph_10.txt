@@ -2,9 +2,9 @@ digraph G {
 	0 [ label="0 | start (__entryPoint__)" shape="rectangle" ];
 	1 [ label="1 | 0" shape="rectangle" ];
 	2 [ label="2 | 1" shape="rectangle" ];
-	3 [ label="3 | if" shape="rectangle" ];
-	4 [ label="4 | true" shape="rectangle" ];
-	5 [ label="5 | merge (3)" shape="rectangle" ];
+	3 [ label="3 | true" shape="rectangle" ];
+	4 [ label="4 | if" shape="rectangle" ];
+	5 [ label="5 | merge (4)" shape="rectangle" ];
 	6 [ label="6 | if" shape="rectangle" ];
 	7 [ label="7 | merge (6)" shape="rectangle" ];
 	8 [ label="8 | 2" shape="rectangle" ];
@@ -17,10 +17,10 @@ digraph G {
 	15 [ label="15 | dummy" shape="rectangle" ];
 	16 [ label="16 | phi  (5)" shape="rectangle" ];
 	17 [ label="17 | phi  (5)" shape="rectangle" ];
-	0 -> 3 [ label="control" ];
-	4 -> 3 [ label="condition" ];
-	3 -> 6 [ label="true-control" ];
-	4 -> 6 [ label="condition" ];
+	0 -> 4 [ label="control" ];
+	3 -> 4 [ label="condition" ];
+	4 -> 6 [ label="true-control" ];
+	3 -> 6 [ label="condition" ];
 	6 -> 9 [ label="true-control" ];
 	9 -> 7 [ label="control" ];
 	6 -> 11 [ label="false-control" ];
@@ -30,7 +30,7 @@ digraph G {
 	8 -> 13 [ label="from 9" ];
 	1 -> 13 [ label="from 11" ];
 	7 -> 5 [ label="control" ];
-	3 -> 15 [ label="false-control" ];
+	4 -> 15 [ label="false-control" ];
 	15 -> 5 [ label="control" ];
 	14 -> 16 [ label="from 7" ];
 	2 -> 16 [ label="from 15" ];
