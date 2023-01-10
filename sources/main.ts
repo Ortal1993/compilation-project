@@ -572,7 +572,7 @@ class Analyzer {
 
         arrayLiteralExp.elements.forEach((element: ts.Expression, index: number) => {
             let expNodeId: NodeId = this.processExpression(element);
-            let indexNodeId: NodeId = this.graph.addVertex(VertexType.Symbol, {name: String(index)});
+            let indexNodeId: NodeId = this.constTable.getNodeId(String(index), true);
             this.createStoreNode(expNodeId, newNodeId, indexNodeId);
         });
 
@@ -586,7 +586,7 @@ class Analyzer {
         objectLiteralExp.properties.forEach((newProperty: ts.ObjectLiteralElementLike) => {
             let expNodeId: NodeId = this.processExpression((newProperty as ts.PropertyAssignment).initializer);
             let propertyName: String = Analyzer.getIdentifierName((newProperty as ts.PropertyAssignment).name);
-            let propertyNodeId: NodeId = this.graph.addVertex(VertexType.Symbol, {name: propertyName});
+            let propertyNodeId: NodeId = this.constTable.getNodeId(propertyName, true);
             this.createStoreNode(expNodeId, newNodeId, propertyNodeId);
         });
 
@@ -751,7 +751,7 @@ class Analyzer {
 
     private getPropertyAccessArguments(propertyAccessExpression: ts.PropertyAccessExpression): [NodeId, NodeId] {
         let propertyName: string = Analyzer.getIdentifierName((propertyAccessExpression.name) as ts.Identifier);
-        let properyNodeId: NodeId = this.graph.addVertex(VertexType.Symbol, {name: propertyName});
+        let properyNodeId: NodeId = this.constTable.getNodeId(propertyName, true);
         let objectNodeId: NodeId = this.processExpression(propertyAccessExpression.expression);
         return [objectNodeId, properyNodeId];
     }

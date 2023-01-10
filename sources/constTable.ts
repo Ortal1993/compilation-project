@@ -10,9 +10,18 @@ export class ConstTable {
         this.graph = _graph;
     }
 
-    public getNodeId(constVal: unknown): NodeId {
+    public getNodeId(constVal: unknown, isSymbol: boolean = false): NodeId {
+        if (isSymbol) {
+            constVal = '#' + (constVal as string);
+        }
         if (!this.constTable.has(constVal)) {
-            let nodeId: NodeId = this.graph.addVertex(VertexType.Const, {value: constVal});
+            let nodeId: NodeId;
+            if (isSymbol) {
+                nodeId = this.graph.addVertex(VertexType.Symbol, {name: constVal as string});
+            }
+            else {
+                nodeId = this.graph.addVertex(VertexType.Const, {value: constVal});
+            }
             this.constTable.set(constVal, nodeId);
             return nodeId;
         }
