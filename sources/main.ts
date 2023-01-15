@@ -1,5 +1,5 @@
 import * as ts from "typescript";
-import { Graph, Edge } from "./graph";
+import { Graph, Edge, EdgeType } from "./graph";
 import { SymbolTable } from "./symbolTable";
 import { ConstTable } from "./constTable";
 import { NodeId, VertexType, BinaryOperation, UnaryOperation } from "./types";
@@ -148,7 +148,9 @@ class Analyzer {
 
         postponedFunctionStatements.forEach((funcDeclaration: ts.FunctionDeclaration) => {
             let funcName: string = (funcDeclaration.name as any).escapedText;
-            let funcStartNodeId: NodeId = this.symbolTable.getIdByName(funcName);
+            let funcStartNodeId: NodeId = this.graph.addVertex(VertexType.Start, {name: funcName});
+            let funcSymbolNodeId: NodeId = this.symbolTable.getIdByName(funcName);
+            this.graph.addEdge(funcStartNodeId, funcSymbolNodeId, "association", EdgeType.Association);
             this.controlVertex = funcStartNodeId;
 
             this.symbolTable.addNewScope();
@@ -172,8 +174,8 @@ class Analyzer {
 
     private processFunctionDeclaration(funcDeclaration: ts.FunctionDeclaration): void {
         let funcName: string = (funcDeclaration.name as any).escapedText;
-        let funcStartNodeId: NodeId = this.graph.addVertex(VertexType.Start, {name: funcName});
-        this.symbolTable.addSymbol(funcName, funcStartNodeId, true);
+        let funcSymbolNodeId: NodeId = this.graph.addVertex(VertexType.Symbol, {name: funcName});
+        this.symbolTable.addSymbol(funcName, funcSymbolNodeId, true);
     }
 
     private processClassDeclaration(classDeclaration: ts.ClassDeclaration): void {

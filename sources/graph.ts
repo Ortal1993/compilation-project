@@ -1,6 +1,12 @@
 import { NodeId, VertexType, BinaryOperation, UnaryOperation } from "./types";
 import * as vertex from "./vertex";
 
+
+export enum EdgeType {
+    Standard,
+    Association
+}
+
 export class Graph {
     private edges: Array<Edge>;
     private vertices: Map<NodeId, vertex.Vertex>;
@@ -8,6 +14,17 @@ export class Graph {
     public constructor() {
         this.edges = new Array<Edge>();
         this.vertices = new Map<NodeId, vertex.Vertex>();
+    }
+
+    private static typeToStyle(type: EdgeType, label: string) {
+        switch(type) {
+            case EdgeType.Standard:
+                return `label="${label}"`;
+            case EdgeType.Association:
+                return `label="${label}", style=dashed, dir=none`;
+            default:
+                throw new Error('Unknown edge type');
+        }
     }
 
     public getEdgesWithNegativeSource(): Array<Edge> {
@@ -26,11 +43,11 @@ export class Graph {
         }
     }
 
-    public addEdge(srcId: NodeId, dstId: NodeId, type: string): void {
+    public addEdge(srcId: NodeId, dstId: NodeId, label: string, type: EdgeType = EdgeType.Standard): void {
         this.checkVertexId(srcId);
         this.checkVertexId(dstId);
 
-        let newEdge: Edge = new Edge(srcId, dstId, type);
+        let newEdge: Edge = new Edge(srcId, dstId, label, type);
         this.edges.push(newEdge);
     }
 
@@ -117,7 +134,7 @@ export class Graph {
                 content += `\t${vertex.id} [ label="${vertex.getLabel()}" shape="rectangle" ];\n`
             });
             this.edges.forEach(edge => {
-                content += `\t${edge.srcId} -> ${edge.dstId} [ label="${edge.type}" ];\n`
+                content += `\t${edge.srcId} -> ${edge.dstId} [ ${Graph.typeToStyle(edge.type, edge.label)} ];\n`
             });
             content += "}\n";
         }
@@ -135,14 +152,17 @@ export class Graph {
     }
 }
 
+
 export class Edge {
     public srcId: NodeId;
     public dstId: NodeId;
-    public type: string;
+    public label: string;
+    public type: EdgeType;
 
-    public constructor(_srcId: NodeId, _dstId: NodeId, _type: string) {
+    public constructor(_srcId: NodeId, _dstId: NodeId, _label: string, _type: EdgeType) {
         this.srcId = _srcId;
         this.dstId = _dstId;
+        this.label = _label;
         this.type = _type;
     }
 }

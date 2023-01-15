@@ -310,6 +310,6 @@ export class SymbolVertex extends Vertex {
     }
 
     public getLabel(): string {
-        return this.getLabelPrefix() + this.name;
+        return this.getLabelPrefix() + "#" + this.name;
     }
 }
