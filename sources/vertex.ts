@@ -174,15 +174,13 @@ export class WhileVertex extends ControlVertex {
 }
 
 export class PhiVertex extends DataVertex {
-    public mergeId: NodeId;
 
-    constructor(_mergeId: NodeId) {
+    constructor() {
         super();
-        this.mergeId = _mergeId;
     }
 
     public getLabel(): string {
-        return this.getLabelPrefix() + "phi " + " (" + String(this.mergeId) + ")";
+        return this.getLabelPrefix() + "phi";
     }
 }
 
@@ -233,15 +231,13 @@ export class DummyVertex extends ControlVertex {
 }
 
 export class MergeVertex extends ControlVertex {
-    public branchOriginId: NodeId;
 
-    constructor(_branchOriginId: NodeId) {
+    constructor() {
         super();
-        this.branchOriginId = _branchOriginId;
     }
 
     public getLabel(): string {
-        return this.getLabelPrefix() + "merge (" + String(this.branchOriginId) + ")";
+        return this.getLabelPrefix() + "merge";
     }
 }
 

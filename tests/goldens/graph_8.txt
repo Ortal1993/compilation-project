@@ -7,13 +7,13 @@ digraph G {
 	5 [ label="5 | false" shape="rectangle" ];
 	6 [ label="6 | ||" shape="rectangle" ];
 	7 [ label="7 | if" shape="rectangle" ];
-	8 [ label="8 | merge (7)" shape="rectangle" ];
+	8 [ label="8 | merge" shape="rectangle" ];
 	9 [ label="9 | call" shape="rectangle" ];
 	10 [ label="10 | 10" shape="rectangle" ];
 	11 [ label="11 | call" shape="rectangle" ];
 	12 [ label="12 | 30" shape="rectangle" ];
 	13 [ label="13 | 40" shape="rectangle" ];
-	14 [ label="14 | phi  (8)" shape="rectangle" ];
+	14 [ label="14 | phi" shape="rectangle" ];
 	15 [ label="15 | call" shape="rectangle" ];
 	16 [ label="16 | start (add)" shape="rectangle" ];
 	17 [ label="17 | param (1): (16)" shape="rectangle" ];
@@ -29,6 +29,7 @@ digraph G {
 	4 -> 6 [ label="left" ];
 	0 -> 7 [ label="control" ];
 	6 -> 7 [ label="condition" ];
+	7 -> 8 [ label="association", style=dashed, dir=none ];
 	3 -> 9 [ label="pos: 1" ];
 	10 -> 9 [ label="pos: 2" ];
 	1 -> 9 [ label="callable" ];
@@ -39,6 +40,7 @@ digraph G {
 	2 -> 11 [ label="callable" ];
 	7 -> 11 [ label="false-control" ];
 	11 -> 8 [ label="control" ];
+	14 -> 8 [ label="association", style=dashed, dir=none ];
 	9 -> 14 [ label="from 9" ];
 	3 -> 14 [ label="from 11" ];
 	14 -> 15 [ label="pos: 1" ];

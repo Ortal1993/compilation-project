@@ -5,7 +5,7 @@ digraph G {
 	3 [ label="3 | 5" shape="rectangle" ];
 	4 [ label="4 | true" shape="rectangle" ];
 	5 [ label="5 | if" shape="rectangle" ];
-	6 [ label="6 | merge (5)" shape="rectangle" ];
+	6 [ label="6 | merge" shape="rectangle" ];
 	7 [ label="7 | 6" shape="rectangle" ];
 	8 [ label="8 | call" shape="rectangle" ];
 	9 [ label="9 | dummy" shape="rectangle" ];
@@ -21,6 +21,7 @@ digraph G {
 	19 [ label="19 | -" shape="rectangle" ];
 	0 -> 5 [ label="control" ];
 	4 -> 5 [ label="condition" ];
+	5 -> 6 [ label="association", style=dashed, dir=none ];
 	7 -> 8 [ label="pos: 1" ];
 	1 -> 8 [ label="callable" ];
 	5 -> 8 [ label="true-control" ];

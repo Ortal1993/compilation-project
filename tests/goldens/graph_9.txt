@@ -8,7 +8,7 @@ digraph G {
 	6 [ label="6 | 1" shape="rectangle" ];
 	7 [ label="7 | <=" shape="rectangle" ];
 	8 [ label="8 | if" shape="rectangle" ];
-	9 [ label="9 | merge (8)" shape="rectangle" ];
+	9 [ label="9 | merge" shape="rectangle" ];
 	10 [ label="10 | return (4)" shape="rectangle" ];
 	11 [ label="11 | dummy" shape="rectangle" ];
 	12 [ label="12 | return (4)" shape="rectangle" ];
@@ -23,6 +23,7 @@ digraph G {
 	5 -> 7 [ label="left" ];
 	4 -> 8 [ label="control" ];
 	7 -> 8 [ label="condition" ];
+	8 -> 9 [ label="association", style=dashed, dir=none ];
 	8 -> 10 [ label="true-control" ];
 	6 -> 10 [ label="value" ];
 	8 -> 11 [ label="false-control" ];

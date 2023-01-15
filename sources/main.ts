@@ -347,8 +347,9 @@ class Analyzer {
 
     private processWhileStatement(whileStatement: ts.WhileStatement): void {
         let preMergeControlVertex: NodeId = this.controlVertex;
-        let whileNodeId: NodeId = this.graph.addVertex(VertexType.While)
-        let mergeNodeId: NodeId = this.graph.addVertex(VertexType.Merge, {branchOriginId: whileNodeId});
+        let whileNodeId: NodeId = this.graph.addVertex(VertexType.While);
+        let mergeNodeId: NodeId = this.graph.addVertex(VertexType.Merge);
+        this.graph.addEdge(whileNodeId, mergeNodeId, "association", EdgeType.Association);
 
         this.whileStack.unshift(mergeNodeId);
         this.breakStack.unshift(new Array<NodeId>()); // the list is popped right after backpatching it inside nextControl()
@@ -388,7 +389,8 @@ class Analyzer {
 
         let symbolTableCopy: Map<string, NodeId> = this.symbolTable.getCopy();
 
-        let mergeNodeId: NodeId = this.graph.addVertex(VertexType.Merge, {branchOriginId: ifNodeId});
+        let mergeNodeId: NodeId = this.graph.addVertex(VertexType.Merge);
+        this.graph.addEdge(ifNodeId, mergeNodeId, "association", EdgeType.Association);
 
         this.currentBranchType = true;
         this.processBranchBlockWrapper(ifStatement.thenStatement);
@@ -454,6 +456,8 @@ class Analyzer {
             }
             else {
                 let phiNodeId: NodeId = this.graph.addVertex(VertexType.Phi, {mergeId: mergeNodeId});
+                this.graph.addEdge(phiNodeId, mergeNodeId, "association", EdgeType.Association);
+
                 if (trueBranchNodeId && falseBranchNodeId) {
                     this.graph.addEdge(trueBranchNodeId, phiNodeId, phiEdgesLabels.true);
                     this.graph.addEdge(falseBranchNodeId, phiNodeId, phiEdgesLabels.false);

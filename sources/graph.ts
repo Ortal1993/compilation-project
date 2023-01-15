@@ -70,7 +70,7 @@ export class Graph {
                 newVertex = new vertex.IfVertex();
                 break;
             case VertexType.Phi:
-                newVertex = new vertex.PhiVertex(properties["mergeId"]);
+                newVertex = new vertex.PhiVertex();
                 break;
             case VertexType.Start:
                 newVertex = new vertex.StartVertex(properties["name"]);
@@ -88,7 +88,7 @@ export class Graph {
                 newVertex = new vertex.WhileVertex();
                 break;
             case VertexType.Merge:
-                newVertex = new vertex.MergeVertex(properties["branchOriginId"]);
+                newVertex = new vertex.MergeVertex();
                 break;
             case VertexType.Return:
                 newVertex = new vertex.ReturnVertex(properties["funcId"]);
