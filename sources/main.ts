@@ -158,8 +158,8 @@ class Analyzer {
 
             funcDeclaration.parameters.forEach((parameter: ts.ParameterDeclaration, position: number) => {
                 let parameterName: string = (parameter.name as any).escapedText;
-                let parameterNodeId: NodeId = this.graph.addVertex(VertexType.Parameter,
-                                                                   {pos: position + 1, funcId: funcStartNodeId});
+                let parameterNodeId: NodeId = this.graph.addVertex(VertexType.Parameter, {pos: position + 1});
+                this.graph.addEdge(parameterNodeId, funcStartNodeId, "association", EdgeType.Association);
                 this.symbolTable.addSymbol(parameterName, parameterNodeId, false, true);
             });
 
@@ -219,11 +219,12 @@ class Analyzer {
         this.functionsStack.unshift(methodStartNodeId);
 
         let thisNodeId: NodeId = this.graph.addVertex(VertexType.Parameter, {pos: 0, funcId: methodStartNodeId});
+        this.graph.addEdge(thisNodeId, methodStartNodeId, "association", EdgeType.Association);
         this.symbolTable.addSymbol('this', thisNodeId, false, true);
         methodDecl.parameters.forEach((parameter: ts.ParameterDeclaration, position: number) => {
             let parameterName: string = (parameter.name as any).escapedText;
-            let parameterNodeId: NodeId = this.graph.addVertex(VertexType.Parameter,
-                                                                {pos: position + 1, funcId: methodStartNodeId});
+            let parameterNodeId: NodeId = this.graph.addVertex(VertexType.Parameter, {pos: position + 1});
+            this.graph.addEdge(parameterNodeId, methodStartNodeId, "association", EdgeType.Association);
             this.symbolTable.addSymbol(parameterName, parameterNodeId, false, true);
         });
 
@@ -481,7 +482,8 @@ class Analyzer {
 
     private processReturnStatement(retStatement: ts.ReturnStatement): void {
         let currentFuncNodeId: NodeId = this.functionsStack[0];
-        let returnNodeId: NodeId = this.graph.addVertex(VertexType.Return, {funcId: currentFuncNodeId});
+        let returnNodeId: NodeId = this.graph.addVertex(VertexType.Return);
+        this.graph.addEdge(returnNodeId, currentFuncNodeId, "association", EdgeType.Association);
         this.nextControl(returnNodeId);
 
         if (retStatement.expression !== undefined) {
@@ -608,12 +610,13 @@ class Analyzer {
         this.symbolTable.addNewScope();
         this.functionsStack.unshift(funcStartNodeId);
 
-        let thisNodeId: NodeId = this.graph.addVertex(VertexType.Parameter, {pos: 0, funcId: funcStartNodeId});
+        let thisNodeId: NodeId = this.graph.addVertex(VertexType.Parameter, {pos: 0});
+        this.graph.addEdge(thisNodeId, funcStartNodeId, "association", EdgeType.Association);
         this.symbolTable.addSymbol('this', thisNodeId, false, true);
         funcExp.parameters.forEach((parameter: ts.ParameterDeclaration, position: number) => {
             let parameterName: string = (parameter.name as any).escapedText;
-            let parameterNodeId: NodeId = this.graph.addVertex(VertexType.Parameter,
-                                                                {pos: position + 1, funcId: funcStartNodeId});
+            let parameterNodeId: NodeId = this.graph.addVertex(VertexType.Parameter, {pos: position + 1});
+            this.graph.addEdge(parameterNodeId, funcStartNodeId, "association", EdgeType.Association);
             this.symbolTable.addSymbol(parameterName, parameterNodeId, false, true);
         });
 

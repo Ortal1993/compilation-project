@@ -58,7 +58,7 @@ export class Graph {
                 newVertex = new vertex.ConstVertex(properties["value"]);
                 break;
             case VertexType.Parameter:
-                newVertex = new vertex.ParameterVertex(properties["pos"], properties["funcId"]);
+                newVertex = new vertex.ParameterVertex(properties["pos"]);
                 break;
             case VertexType.BinaryOperation:
                 newVertex = new vertex.BinaryOperationVertex(properties["operation"]);
@@ -91,7 +91,7 @@ export class Graph {
                 newVertex = new vertex.MergeVertex();
                 break;
             case VertexType.Return:
-                newVertex = new vertex.ReturnVertex(properties["funcId"]);
+                newVertex = new vertex.ReturnVertex();
                 break;
             case VertexType.Continue:
                 newVertex = new vertex.ContinueVertex();

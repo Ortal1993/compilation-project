@@ -28,12 +28,12 @@ digraph G {
 	26 [ label="26 | #unshift" shape="rectangle" ];
 	27 [ label="27 | load" shape="rectangle" ];
 	28 [ label="28 | start (add)" shape="rectangle" ];
-	29 [ label="29 | param (1): (28)" shape="rectangle" ];
-	30 [ label="30 | return (28)" shape="rectangle" ];
+	29 [ label="29 | param (1)" shape="rectangle" ];
+	30 [ label="30 | return" shape="rectangle" ];
 	31 [ label="31 | 5" shape="rectangle" ];
 	32 [ label="32 | +" shape="rectangle" ];
 	33 [ label="33 | start (getIndex)" shape="rectangle" ];
-	34 [ label="34 | return (33)" shape="rectangle" ];
+	34 [ label="34 | return" shape="rectangle" ];
 	35 [ label="35 | 1" shape="rectangle" ];
 	0 -> 3 [ label="control" ];
 	3 -> 6 [ label="control" ];
@@ -74,11 +74,14 @@ digraph G {
 	27 -> 24 [ label="callable" ];
 	27 -> 24 [ label="control" ];
 	28 -> 1 [ label="association", style=dashed, dir=none ];
+	29 -> 28 [ label="association", style=dashed, dir=none ];
+	30 -> 28 [ label="association", style=dashed, dir=none ];
 	28 -> 30 [ label="control" ];
 	31 -> 32 [ label="right" ];
 	29 -> 32 [ label="left" ];
 	32 -> 30 [ label="value" ];
 	33 -> 2 [ label="association", style=dashed, dir=none ];
+	34 -> 33 [ label="association", style=dashed, dir=none ];
 	33 -> 34 [ label="control" ];
 	35 -> 34 [ label="value" ];
 }

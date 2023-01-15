@@ -46,16 +46,14 @@ export class ConstVertex extends DataVertex {
 
 export class ParameterVertex extends DataVertex {
     public pos: number;
-    public funcId: NodeId;
 
-    constructor(_pos: number, _funcId: NodeId) {
+    constructor(_pos: number) {
         super();
         this.pos = _pos;
-        this.funcId = _funcId;
     }
 
     public getLabel(): string {
-        return this.getLabelPrefix() + "param (" + String(this.pos) + "): (" + String(this.funcId) + ")";
+        return this.getLabelPrefix() + "param (" + String(this.pos) + ")";
     }
 }
 
@@ -242,15 +240,13 @@ export class MergeVertex extends ControlVertex {
 }
 
 export class ReturnVertex extends ControlVertex {
-    public funcId: NodeId;
 
-    constructor(_funcId: NodeId) {
+    constructor() {
         super();
-        this.funcId = _funcId;
     }
 
     public getLabel(): string {
-        return this.getLabelPrefix() + "return (" + String(this.funcId) + ")";
+        return this.getLabelPrefix() + "return";
     }
 }
 
