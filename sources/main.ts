@@ -142,6 +142,15 @@ class Analyzer {
         this.symbolTable.removeCurrentScope();
     }
 
+    private processParameters(parametersList: ts.NodeArray<ts.ParameterDeclaration>, startNodeId: NodeId): void {
+        parametersList.forEach((parameter: ts.ParameterDeclaration, position: number) => {
+            let parameterName: string = (parameter.name as any).escapedText;
+            let parameterNodeId: NodeId = this.graph.addVertex(VertexType.Parameter, {pos: position + 1});
+            this.graph.addEdge(parameterNodeId, startNodeId, "association", EdgeType.Association);
+            this.symbolTable.addSymbol(parameterName, parameterNodeId, false, true);
+        });
+    }
+
     //supports cases in which function's definition uses variable that is declared only after the definition
     private processPostponedFunctionStatements(postponedFunctionStatements: Array<ts.FunctionDeclaration>): void {
         let prevControlVertex: NodeId = this.controlVertex;
@@ -156,13 +165,7 @@ class Analyzer {
             this.symbolTable.addNewScope();
             this.functionsStack.unshift(funcStartNodeId);
 
-            funcDeclaration.parameters.forEach((parameter: ts.ParameterDeclaration, position: number) => {
-                let parameterName: string = (parameter.name as any).escapedText;
-                let parameterNodeId: NodeId = this.graph.addVertex(VertexType.Parameter, {pos: position + 1});
-                this.graph.addEdge(parameterNodeId, funcStartNodeId, "association", EdgeType.Association);
-                this.symbolTable.addSymbol(parameterName, parameterNodeId, false, true);
-            });
-
+            this.processParameters(funcDeclaration.parameters, funcStartNodeId);
             this.processBlockStatements((funcDeclaration.body as ts.Block).statements);
 
             this.functionsStack.shift();
@@ -221,12 +224,7 @@ class Analyzer {
         let thisNodeId: NodeId = this.graph.addVertex(VertexType.Parameter, {pos: 0, funcId: methodStartNodeId});
         this.graph.addEdge(thisNodeId, methodStartNodeId, "association", EdgeType.Association);
         this.symbolTable.addSymbol('this', thisNodeId, false, true);
-        methodDecl.parameters.forEach((parameter: ts.ParameterDeclaration, position: number) => {
-            let parameterName: string = (parameter.name as any).escapedText;
-            let parameterNodeId: NodeId = this.graph.addVertex(VertexType.Parameter, {pos: position + 1});
-            this.graph.addEdge(parameterNodeId, methodStartNodeId, "association", EdgeType.Association);
-            this.symbolTable.addSymbol(parameterName, parameterNodeId, false, true);
-        });
+        this.processParameters(methodDecl.parameters, methodStartNodeId);
 
         this.processBlockStatements((methodDecl.body as ts.Block).statements);
 
@@ -613,13 +611,7 @@ class Analyzer {
         let thisNodeId: NodeId = this.graph.addVertex(VertexType.Parameter, {pos: 0});
         this.graph.addEdge(thisNodeId, funcStartNodeId, "association", EdgeType.Association);
         this.symbolTable.addSymbol('this', thisNodeId, false, true);
-        funcExp.parameters.forEach((parameter: ts.ParameterDeclaration, position: number) => {
-            let parameterName: string = (parameter.name as any).escapedText;
-            let parameterNodeId: NodeId = this.graph.addVertex(VertexType.Parameter, {pos: position + 1});
-            this.graph.addEdge(parameterNodeId, funcStartNodeId, "association", EdgeType.Association);
-            this.symbolTable.addSymbol(parameterName, parameterNodeId, false, true);
-        });
-
+        this.processParameters(funcExp.parameters, funcStartNodeId);
         this.processBlockStatements((funcExp.body as ts.Block).statements);
 
         this.functionsStack.shift();
