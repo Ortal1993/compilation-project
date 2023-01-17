@@ -1,0 +1,56 @@
+.decl edge(srcId:number, dstId:number, kind:symbol, label:symbol, type:symbol)
+.input edge(filename="edges.facts", delimiter=",")
+
+.decl vertex(nodeId:number, type:symbol, label:symbol)
+.input vertex(filename="vertices.facts", delimiter=",")
+
+.decl startVertex(nodeId:number)
+startVertex(nodeId) :- vertex(nodeId, "control", label), contains("start", label).
+
+.decl paramVertex(nodeId:number)
+paramVertex(nodeId) :- vertex(nodeId, "data", label), contains("param", label).
+
+.decl storeVertex(nodeId:number)
+storeVertex(nodeId) :- vertex(nodeId, "control", label), contains("store", label).
+
+.decl loadVertex(nodeId:number)
+loadVertex(nodeId) :- vertex(nodeId, "control", label), contains("load", label).
+
+.decl parameterFunction(functionNodeId:number, parameterNodeId:number)
+parameterFunction(functionNodeId, parameterNodeId) :- startVertex(functionNodeId), paramVertex(parameterNodeId), edge(parameterNodeId, functionNodeId, "association", _, _).
+
+.decl parameterStore(functionNodeId:number, parameterNodeId:number, storeNodeId:number)
+parameterStore(functionNodeId, parameterNodeId, storeNodeId) :- 
+parameterFunction(functionNodeId, parameterNodeId),
+storeVertex(storeNodeId),
+edge(parameterNodeId, storeNodeId, "data", "value", _).
+
+
+.decl storeArguments(objectNodeId:number, propertyNodeId:number, storeNodeId:number)
+storeArguments(objectNodeId, propertyNodeId, storeNodeId) :- 
+storeVertex(storeNodeId), 
+edge(objectNodeId, storeNodeId, "data", "object", _),
+edge(propertyNodeId, storeNodeId, "data", "property", _).
+
+.decl loadIntoStore(loadedObjectNodeId:number, loadedPropertyNodeId:number, loadNodeId:number, storeNodeId:number)
+loadIntoStore(loadedObjectNodeId, loadedPropertyNodeId, loadNodeId, storeNodeId) :- 
+loadVertex(loadNodeId), 
+edge(loadedObjectNodeId, loadNodeId, "data", "object", _),
+edge(loadedPropertyNodeId, loadNodeId, "data", "property", _),
+edge(loadNodeId, storeNodeId, "data", "value", _),
+storeVertex(storeNodeId).
+
+.decl pointsTo(functionNodeId:number, parameterNodeId:number, objectNodeId:number, propertyNodeId:number)
+.output pointsTo(filename="output.csv", delimiter=",")
+
+// This is the recursion base: it tracks direct assigments of parameters into objects' properties.
+pointsTo(functionNodeId, parameterNodeId, objectNodeId, propertyNodeId) :- 
+parameterStore(functionNodeId, parameterNodeId, storeNodeId),
+storeArguments(objectNodeId, propertyNodeId, storeNodeId).
+
+// This is the recursion body: it tracks assigments of objects' properties into other objects' properties, where the
+// assigned values stores the parameters value.
+pointsTo(functionNodeId, parameterNodeId, objectNodeId, propertyNodeId) :-
+pointsTo(functionNodeId, parameterNodeId, loadedObjectNodeId, loadedPropertyNodeId),
+loadIntoStore(loadedObjectNodeId, loadedPropertyNodeId, _, storeNodeId),
+storeArguments(objectNodeId, propertyNodeId, storeNodeId).
