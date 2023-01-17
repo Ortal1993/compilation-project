@@ -165,7 +165,7 @@ class Stages:
         else:
             if self.cfg.verbose:
                 self.log.info('Analyzer finished successfully', format=[Format.GREEN])
-                self.log.info(f'Output path: {os.path.join(self.cfg.paths.output_dir, self.cfg.output)}', format=[Format.BOLD])
+            self.log.info(f'Output files path: {self.cfg.paths.output_dir}', format=[Format.BOLD], prefix=False)
 
     def _test(self):
         any_failed = False

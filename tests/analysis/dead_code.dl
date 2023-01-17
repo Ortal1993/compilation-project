@@ -1,0 +1,25 @@
+.decl edge(srcId:number, dstId:number, kind:symbol, label:symbol, type:symbol)
+.input edge(filename="edges.facts", delimiter=",")
+
+.decl vertex(nodeId:number, type:symbol, label:symbol)
+.input vertex(filename="vertices.facts", delimiter=",")
+
+.decl deadVertex(nodeId:number)
+.output deadVertex(filename="deadVertices.csv", delimiter=",")
+
+.decl dataVertex(nodeId:number)
+dataVertex(nodeId) :- vertex(nodeId, "data", _).
+
+.decl deadDataVertex(nodeId:number)
+deadDataVertex(nodeId) :- dataVertex(nodeId), !edge(nodeId, _, "data", _, _).
+deadDataVertex(nodeId) :- dataVertex(nodeId), dataVertex(otherNodeId), edge(nodeId, otherNodeId, "data", _, _), deadDataVertex(otherNodeId).
+
+.decl nonStartControlVertex(nodeId:number)
+nonStartControlVertex(nodeId) :- vertex(nodeId, "control", label), !contains("start", label).
+
+.decl deadControlVertex(nodeId:number)
+deadControlVertex(nodeId) :- nonStartControlVertex(nodeId), !edge(_, nodeId, "control", _, _).
+deadControlVertex(nodeId) :- nonStartControlVertex(nodeId), nonStartControlVertex(otherNodeId), edge(otherNodeId, nodeId, "control", _, _), deadControlVertex(otherNodeId).
+
+deadVertex(nodeId) :- deadDataVertex(nodeId).
+deadVertex(nodeId) :- deadControlVertex(nodeId).

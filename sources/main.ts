@@ -4,6 +4,7 @@ import { SymbolTable } from "./symbolTable";
 import { ConstTable } from "./constTable";
 import { NodeId, VertexType, BinaryOperation, UnaryOperation } from "./types";
 import * as vertex from "./vertex";
+import { exportGraph } from "./outputManager";
 
 class Analyzer {
     private output: string;
@@ -51,6 +52,7 @@ class Analyzer {
         sourceFiles.forEach((sourceFile: ts.SourceFile) => this.processBlockStatements(sourceFile.statements));
 
         this.graph.print(false, this.output);
+        exportGraph(this.graph);
 
         this.destroySymbolTable();
     }

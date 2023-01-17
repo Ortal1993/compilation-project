@@ -3,8 +3,8 @@ import * as vertex from "./vertex";
 
 
 export enum EdgeType {
-    Standard,
-    Association
+    Standard = "standard",
+    Association = "association"
 };
 
 export enum EdgeKind {
