@@ -56,6 +56,7 @@ class Analyzer {
         sourceFiles.forEach((sourceFile: ts.SourceFile) => this.processBlockStatements(sourceFile.statements));
 
         this.graph.print(false, this.output);
+        exportGraph(this.graph);
 
         this.destroySymbolTable();
     }
