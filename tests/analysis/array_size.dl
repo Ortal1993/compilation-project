@@ -1,0 +1,77 @@
+.decl edge(srcId:number, dstId:number, kind:symbol, label:symbol, type:symbol)
+.input edge(filename="edges.facts", delimiter=",")
+
+.decl vertex(nodeId:number, type:symbol, label:symbol)
+.input vertex(filename="vertices.facts", delimiter=",")
+
+//functions start vertices
+.decl startVertex(nodeId:number)
+startVertex(nodeId) :- vertex(nodeId, "control", label), contains("start", label).
+
+.decl paramVertex(nodeId:number)
+paramVertex(nodeId) :- vertex(nodeId, "data", label), contains("param", label).
+
+.decl loadVertex(nodeId:number)
+loadVertex(nodeId) :- vertex(nodeId, "control", label), contains("load", label).
+
+.decl callVertex(nodeId:number)
+callVertex(nodeId) :- vertex(nodeId, "control", label), contains("call", label).
+
+// this relation contains function and array parameter pairs
+// TODO: need to add type checking for parameters
+.decl functionParameter(functionNodeId:number, arrayParameterNodeId:number)
+functionParameter(functionNodeId, arrayParameterNodeId) :- startVertex(functionNodeId), paramVertex(arrayParameterNodeId), edge(arrayParameterNodeId, functionNodeId, "association", _, _).
+
+.decl neighborsControl(srcNodeId:number, dstNodeId:number)
+neighborsControl(srcNodeId, dstNodeId) :- edge(srcNodeId, dstNodeId, "control", _, _).
+
+// .decl pathControl(srcNodeId:number, dstNodeId:number)
+// pathControl(srcNodeId, dstNodeId) :- neighborsControl(srcNodeId, dstNodeId).
+// pathControl(srcNodeId, dstNodeId) :- pathControl(srcNodeId, nodeId),
+// pathControl(nodeId, dstNodeId).
+
+.decl functionToControlVertex(functionNodeId:number, controlNodeId:number)
+functionToControlVertex(functionNodeId, controlNodeId) :- startVertex(functionNodeId),
+neighborsControl(functionNodeId, controlNodeId).
+functionToControlVertex(functionNodeId, controlNodeId) :- startVertex(functionNodeId),
+neighborsControl(functionNodeId, nodeId),
+neighborsControl(nodeId, controlNodeId).
+
+.decl changingMethods(name:symbol, delta:number)
+changingMethods("push", 1).
+changingMethods("pop", -1).
+changingMethods("unshift", 1).
+changingMethods("shift", -1).
+
+
+.decl arrayParameterHasChanged(arrayParameterNodeId:number,
+                             callControl:number, delta:number)
+arrayParameterHasChanged(arrayParameterNodeId, callControl, delta) :-
+paramVertex(arrayParameterNodeId),
+loadVertex(loadControl),
+callVertex(callControl),
+vertex(propertyNodeId, "data", propertyLable),
+edge(arrayParameterNodeId, loadControl, "data", "object", _),
+edge(propertyNodeId, loadControl, "data", "property", _),
+edge(loadControl, callControl, "data", "callable", _),
+changingMethods(methodName, delta),
+contains(methodName, propertyLable).
+
+.decl arrayParameterDelta(controlNodeId:number, arrayParameterNodeId:number, delta:number)
+
+arrayParameterDelta(controlNodeId, arrayParameterNodeId, 0) :- 
+functionParameter(controlNodeId, arrayParameterNodeId).
+
+//if controlNodeId is call of changing methods
+arrayParameterDelta(controlNodeId, arrayParameterNodeId, delta) :-
+neighborsControl(previousControlNodeId, controlNodeId),
+arrayParameterDelta(previousControlNodeId, arrayParameterNodeId, previousDelta),
+arrayParameterHasChanged(arrayParameterNodeId, controlNodeId, currDelta),
+delta = previousDelta + currDelta.
+
+//else
+arrayParameterDelta(controlNodeId, arrayParameterNodeId, previousDelta) :-
+neighborsControl(previousControlNodeId, controlNodeId),
+arrayParameterDelta(previousControlNodeId, arrayParameterNodeId, previousDelta),
+!arrayParameterHasChanged(arrayParameterNodeId, controlNodeId, _).
+
