@@ -17,6 +17,9 @@ loadVertex(nodeId) :- vertex(nodeId, "control", label), contains("load", label).
 .decl callVertex(nodeId:number)
 callVertex(nodeId) :- vertex(nodeId, "control", label), contains("call", label).
 
+.decl mergeVertex(nodeId:number)
+mergeVertex(nodeId) :- vertex(nodeId, "control", label), contains("merge", label).
+
 // this relation contains function and array parameter pairs
 // TODO: need to add type checking for parameters
 .decl functionParameter(functionNodeId:number, arrayParameterNodeId:number)
@@ -66,7 +69,27 @@ delta = previousDelta + currDelta.
 
 //else
 arrayParameterDelta(controlNodeId, arrayParameterNodeId, previousDelta) :-
+!mergeVertex(controlNodeId),
 neighborsControl(previousControlNodeId, controlNodeId),
 arrayParameterDelta(previousControlNodeId, arrayParameterNodeId, previousDelta),
 !arrayParameterHasChanged(arrayParameterNodeId, controlNodeId, _).
 
+arrayParameterDelta(controlNodeId, arrayParameterNodeId, trueDelta) :-
+mergeVertex(controlNodeId),
+neighborsControl(trueNodeId, controlNodeId),
+neighborsControl(falseNodeId, controlNodeId),
+trueNodeId != falseNodeId,
+arrayParameterDelta(trueNodeId, arrayParameterNodeId, trueDelta),
+arrayParameterDelta(falseNodeId, arrayParameterNodeId, falseDelta),
+trueDelta = falseDelta.
+
+//merge that merges trueDelta and falseDelta which are different so we need to set delta to "Top"
+//"Top" is -1
+arrayParameterDelta(controlNodeId, arrayParameterNodeId, -1) :-
+mergeVertex(controlNodeId),
+neighborsControl(trueNodeId, controlNodeId),
+neighborsControl(falseNodeId, controlNodeId),
+trueNodeId != falseNodeId,
+arrayParameterDelta(trueNodeId, arrayParameterNodeId, trueDelta),
+arrayParameterDelta(falseNodeId, arrayParameterNodeId, falseDelta),
+trueDelta != falseDelta.
