@@ -301,7 +301,7 @@ export class StoreVertex extends ControlVertex {
     }
 }
 
-export class SymbolVertex extends Vertex {
+export class SymbolVertex extends DataVertex {
     public name: string;
 
     constructor(_name: string) {

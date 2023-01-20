@@ -25,11 +25,6 @@ functionParameter(functionNodeId, arrayParameterNodeId) :- startVertex(functionN
 .decl neighborsControl(srcNodeId:number, dstNodeId:number)
 neighborsControl(srcNodeId, dstNodeId) :- edge(srcNodeId, dstNodeId, "control", _, _).
 
-// .decl pathControl(srcNodeId:number, dstNodeId:number)
-// pathControl(srcNodeId, dstNodeId) :- neighborsControl(srcNodeId, dstNodeId).
-// pathControl(srcNodeId, dstNodeId) :- pathControl(srcNodeId, nodeId),
-// pathControl(nodeId, dstNodeId).
-
 .decl functionToControlVertex(functionNodeId:number, controlNodeId:number)
 functionToControlVertex(functionNodeId, controlNodeId) :- startVertex(functionNodeId),
 neighborsControl(functionNodeId, controlNodeId).
@@ -42,7 +37,6 @@ changingMethods("push", 1).
 changingMethods("pop", -1).
 changingMethods("unshift", 1).
 changingMethods("shift", -1).
-
 
 .decl arrayParameterHasChanged(arrayParameterNodeId:number,
                              callControl:number, delta:number)
@@ -58,6 +52,7 @@ changingMethods(methodName, delta),
 contains(methodName, propertyLable).
 
 .decl arrayParameterDelta(controlNodeId:number, arrayParameterNodeId:number, delta:number)
+.output arrayParameterDelta(filename="output.csv", delimiter=",")
 
 arrayParameterDelta(controlNodeId, arrayParameterNodeId, 0) :- 
 functionParameter(controlNodeId, arrayParameterNodeId).
