@@ -75,8 +75,15 @@ functionParameter(controlNodeId, arrayParameterNodeId).
 arrayParameterDelta(controlNodeId, arrayParameterNodeId, delta) :-
 controlNeighbors(previousControlNodeId, controlNodeId),
 arrayParameterDelta(previousControlNodeId, arrayParameterNodeId, previousDelta),
+previousDelta != 999,
 changingMethodCalling(arrayParameterNodeId, controlNodeId, currDelta),
 delta = previousDelta + currDelta.
+
+arrayParameterDelta(controlNodeId, arrayParameterNodeId, 999) :-
+controlNeighbors(previousControlNodeId, controlNodeId),
+arrayParameterDelta(previousControlNodeId, arrayParameterNodeId, previousDelta),
+previousDelta = 999,
+changingMethodCalling(arrayParameterNodeId, controlNodeId, _).
 
 //else
 arrayParameterDelta(controlNodeId, arrayParameterNodeId, previousDelta) :-
@@ -90,7 +97,9 @@ mergeDelta(controlNodeId, arrayParameterNodeId, trueDelta, falseDelta),
 trueDelta = falseDelta.
 
 //merge that merges trueDelta and falseDelta which are different so we need to set delta to "Top"
-//"Top" is -1
-arrayParameterDelta(controlNodeId, arrayParameterNodeId, -1) :-
+//"Top" is 999
+arrayParameterDelta(controlNodeId, arrayParameterNodeId, 999) :-
 mergeDelta(controlNodeId, arrayParameterNodeId, trueDelta, falseDelta),
 trueDelta != falseDelta.
+
+
