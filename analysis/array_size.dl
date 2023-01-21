@@ -12,19 +12,19 @@ dataVertex(nodeId, label) :- vertex(nodeId, "data", label).
 
 //functions start vertices
 .decl startVertex(nodeId:number)
-startVertex(nodeId) :- controlVertex(nodeId, label), contains("start", label).
+startVertex(nodeId) :- controlVertex(nodeId, label), match("[0-9]+ \\x7c start (.*)", label).
 
 .decl paramVertex(nodeId:number)
-paramVertex(nodeId) :- dataVertex(nodeId, label), contains("param", label).
+paramVertex(nodeId) :- dataVertex(nodeId, label), match("[0-9]+ \\x7c param (.*)", label).
 
 .decl loadVertex(nodeId:number)
-loadVertex(nodeId) :- controlVertex(nodeId, label), contains("load", label).
+loadVertex(nodeId) :- controlVertex(nodeId, label), match("[0-9]+ \\x7c load", label).
 
 .decl callVertex(nodeId:number)
-callVertex(nodeId) :- controlVertex(nodeId, label), contains("call", label).
+callVertex(nodeId) :- controlVertex(nodeId, label), match("[0-9]+ \\x7c call", label).
 
 .decl mergeVertex(nodeId:number)
-mergeVertex(nodeId) :- controlVertex(nodeId, label), contains("merge", label).
+mergeVertex(nodeId) :- controlVertex(nodeId, label), match("[0-9]+ \\x7c merge", label).
 
 // this relation contains function and array parameter pairs
 // TODO: need to add type checking for parameters
@@ -52,7 +52,7 @@ edge(arrayParameterNodeId, loadControl, "data", "object", _),
 edge(propertyNodeId, loadControl, "data", "property", _),
 edge(loadControl, callControl, "data", "callable", _),
 changingMethods(methodName, delta),
-contains(methodName, propertyLable).
+match(cat("[0-9]+ \\x7c #", methodName), propertyLable).
 
 .decl mergeDelta(controlNodeId:number, arrayParameterNodeId:number, trueDelta:number, falseDelta:number)
 mergeDelta(controlNodeId, arrayParameterNodeId, trueDelta, falseDelta) :-
@@ -101,5 +101,3 @@ trueDelta = falseDelta.
 arrayParameterDelta(controlNodeId, arrayParameterNodeId, 999) :-
 mergeDelta(controlNodeId, arrayParameterNodeId, trueDelta, falseDelta),
 trueDelta != falseDelta.
-
-
