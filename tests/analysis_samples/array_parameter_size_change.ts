@@ -1,9 +1,10 @@
-function func(a:Array<number>){
+function func(a:Array<number>, b:Array<number>){
     if(true){
         a.push(1);
+        b.pop()
     }
     else{
-        a.push(1);        
+        a.push(1);
     }
     if(true){
         a.unshift(1);
@@ -11,7 +12,8 @@ function func(a:Array<number>){
     else{
         a.pop();
     }
-    add();         
+    add();
+    b.push(2);
     a.push(2);
 }
 
