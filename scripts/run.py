@@ -14,20 +14,20 @@ import re
 def parse_args():
     ap = argparse.ArgumentParser()
 
-    ap.add_argument('-n', '--no-build', dest='build', action='store_false', default=True,
-                    help='Skip build stage')
-    ap.add_argument('-s', '--sample', dest='samples', nargs='+',
-                    help='Run the analyzer on sample with index <SAMPLE> (default: do not run anything)')
-    ap.add_argument('-i', '--input', dest='inputs', nargs='+',
-                    help='Run the analyzer on input file named <INPUT> (default: do not run anything)')
-    ap.add_argument('-o', '--output', dest='output', default='graph.txt',
-                    help='Save the graph inside file named <OUTPUT> (default: graph.txt)')
-    ap.add_argument('-a', '--analyze', dest='analyze', default=None, choices=['array_size'],
-                    help='Run analysis')
+    ap.add_argument('-n', '--no-build', dest='build_project', action='store_false', default=True,
+                    help='Skip build project stage')
+    ap.add_argument('-s', '--sample', dest='samples', nargs='+', metavar='SAMPLE',
+                    help='Build the graph for the sample with index <SAMPLE> (default: do not build the graph)')
+    ap.add_argument('-i', '--input', dest='inputs', nargs='+', metavar='INPUT',
+                    help='Build the graph for the input file named <INPUT> (default: do not build the graph)')
+    ap.add_argument('-g', '--graph-output', dest='graph_name', default='graph.txt', metavar='GRAPH_NAME',
+                    help='Save the graph inside file named <GRAPH_NAME> (default: graph.txt)')
+    ap.add_argument('-a', '--analyze', dest='analyze_type', choices=list(Stages.get_analysis_types().keys()),
+                    help='Run analysis on the graph')
     ap.add_argument('-v', '--verbose', dest='verbose', action='store_true', default=False,
                     help='Print logs and output results')
     ap.add_argument('-c', '--clean', dest='clean', action='store_true', default=False,
-                    help='Before building, remove build and output directories')
+                    help='Before building the project, remove the build and output directories')
     ap.add_argument('-t', '--test', dest='test', action='store_true', default=False,
                     help=argparse.SUPPRESS)
     ap.add_argument('-u', '--update-goldens', dest='update_goldens', action='store_true', default=False,
@@ -90,11 +90,11 @@ class Paths:
 
 class Config:
     def __init__(self, args):
-        self.build = args.build
+        self.build_project = args.build_project
         self.samples = args.samples
         self.inputs = args.inputs
-        self.output = args.output
-        self.analyze = args.analyze
+        self.graph_name = args.graph_name
+        self.analyze_type = args.analyze_type
         self.verbose = args.verbose
         self.clean = args.clean
         self.test = args.test
@@ -108,23 +108,24 @@ class Stages:
         self.log = Log()
 
     def clean(self):
-        if self.cfg.clean:
-            dirs = [
-                (self.cfg.paths.output_dir, 'output'),
-                (self.cfg.paths.build_dir, 'build')
-            ]
-            for dir_path, dir_name in dirs:
-                if self.cfg.verbose:
-                    self.log.info(f'Removing {dir_name} directory')
-                if os.path.isdir(dir_path):
-                    try:
-                        shutil.rmtree(dir_path)
-                    except shutil.Error as e:
-                        self.log.error(f'Failed to remove existing {dir_name} directory', e.errno)
+        if not self.cfg.clean:
+            return
 
+        dirs = [
+            (self.cfg.paths.output_dir, 'output'),
+            (self.cfg.paths.build_dir, 'build')
+        ]
+        for dir_path, dir_name in dirs:
+            if self.cfg.verbose:
+                self.log.info(f'Removing {dir_name} directory')
+            if os.path.isdir(dir_path):
+                try:
+                    shutil.rmtree(dir_path)
+                except shutil.Error as e:
+                    self.log.error(f'Failed to remove existing {dir_name} directory', e.errno)
 
-    def build(self):
-        if not self.cfg.build and not self.cfg.test:
+    def build_project(self):
+        if not self.cfg.build_project and not self.cfg.test:
             if self.cfg.verbose:
                 self.log.info('Skipping build stage')
             return
@@ -142,7 +143,7 @@ class Stages:
             if self.cfg.verbose:
                 self.log.info('Build finished successfully', format=[Format.GREEN])
 
-    def run(self):
+    def build_graph(self):
         if self.cfg.test:
             self._test()
             return
@@ -170,18 +171,22 @@ class Stages:
         else:
             if self.cfg.verbose:
                 self.log.info('The graph was built successfully', format=[Format.GREEN])
-        
-        if self.cfg.analyze is not None:
-            self._run_analysis()
-        
+
+    def analyze(self):
+        if self.cfg.analyze_type is None:
+            return
+
+        analysis_types = self.get_analysis_types()
+        analysis_types[self.cfg.analyze_type](self)
+
+    def finish(self):
         self.log.info(f'Output files path: {self.cfg.paths.output_dir}', format=[Format.BOLD], prefix=False)
 
-    def _run_analysis(self):
-        analysis_type = self.cfg.analyze
-        if analysis_type == 'array_size':
-            self._run_array_size_analysis()
-        else:
-            raise NotImplemented(f'{analysis_type} analysis type is not supported yet')
+    @classmethod
+    def get_analysis_types(cls):
+        return {
+            'array_size': cls._run_array_size_analysis
+        }
 
     def _run_array_size_analysis(self):
         analysis_file = os.path.join(self.cfg.paths.analysis_dir, 'array_size.dl')
@@ -202,7 +207,7 @@ class Stages:
                 self.log.info('Analyzer finished successfully', format=[Format.GREEN])
 
         analysis_output_path = os.path.join(self.cfg.paths.output_dir, 'output.csv')
-        graph_path = os.path.join(self.cfg.paths.output_dir, self.cfg.output)
+        graph_path = os.path.join(self.cfg.paths.output_dir, self.cfg.graph_name)
         self._parse_array_size_analysis_output(analysis_output_path, graph_path)
     
     def _parse_array_size_analysis_output(self, analysis_output_path, graph_path):
@@ -258,7 +263,7 @@ class Stages:
         PASSED, FAILED, UPDATED, UNTOUCHED = 'PASSED', 'FAILED', 'UPDATED', 'UNTOUCHED'
         failed = False
         updated = False
-        self.cfg.output = f'graph_{index}.txt'
+        self.cfg.graph_name = f'graph_{index}.txt'
         run_cmd = self._get_run_command([sample])
 
         if self.cfg.verbose:
@@ -274,7 +279,7 @@ class Stages:
                 failed = self._is_diff(index)
 
         if not failed:
-            os.remove(os.path.join(self.cfg.paths.output_dir, self.cfg.output))
+            os.remove(os.path.join(self.cfg.paths.output_dir, self.cfg.graph_name))
 
         if self.cfg.verbose:
             if failed:
@@ -307,7 +312,7 @@ class Stages:
         self.log.info(f'Result: {result}', prefix=False, format=format)
 
     def _update_golden(self, index):
-        output = os.path.join(self.cfg.paths.output_dir, self.cfg.output)
+        output = os.path.join(self.cfg.paths.output_dir, self.cfg.graph_name)
         golden = os.path.join(self.cfg.paths.goldens_dir, f'graph_{index}.txt')
 
         if self._is_diff(index):
@@ -319,7 +324,7 @@ class Stages:
         return False
 
     def _is_diff(self, index):
-        output = os.path.join(self.cfg.paths.output_dir, self.cfg.output)
+        output = os.path.join(self.cfg.paths.output_dir, self.cfg.graph_name)
         golden = os.path.join(self.cfg.paths.goldens_dir, f'graph_{index}.txt')
 
         with open(output, 'r') as output_file:
@@ -337,7 +342,7 @@ class Stages:
     def _get_run_command(self, input_files):    
         node = 'node'
         entry_point_file = os.path.join(self.cfg.paths.build_dir, 'main.js')
-        output_file = os.path.join(self.cfg.paths.output_dir, self.cfg.output)
+        output_file = os.path.join(self.cfg.paths.output_dir, self.cfg.graph_name)
         return [node, entry_point_file, output_file] + input_files
 
     def _collect_sources(self):
@@ -405,8 +410,10 @@ def main():
     args = parse_args()
     stages = Stages(args)
     stages.clean()
-    stages.build()
-    stages.run()
+    stages.build_project()
+    stages.build_graph()
+    stages.analyze()
+    stages.finish()
 
 
 if __name__ == '__main__':
