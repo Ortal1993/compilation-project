@@ -147,8 +147,8 @@ class Analyzer {
     private processParameters(parametersList: ts.NodeArray<ts.ParameterDeclaration>, startNodeId: NodeId): void {
         parametersList.forEach((parameter: ts.ParameterDeclaration, position: number) => {
             let parameterName: string = (parameter.name as any).escapedText;
-            let parameterNodeId: NodeId = this.graph.addVertex(VertexType.Parameter, {pos: position + 1});
-            this.graph.addEdge(parameterNodeId, startNodeId, EdgeKind.Association, "association", EdgeType.Association);
+            let parameterNodeId: NodeId = this.graph.addVertex(VertexType.Parameter);
+            this.graph.addEdge(parameterNodeId, startNodeId, EdgeKind.Association, "association (pos:" + String(position + 1) + ")", EdgeType.Association);
             this.symbolTable.addSymbol(parameterName, parameterNodeId, false, true);
         });
     }
@@ -223,8 +223,8 @@ class Analyzer {
         this.symbolTable.addNewScope();
         this.functionsStack.unshift(methodStartNodeId);
 
-        let thisNodeId: NodeId = this.graph.addVertex(VertexType.Parameter, {pos: 0, funcId: methodStartNodeId});
-        this.graph.addEdge(thisNodeId, methodStartNodeId, EdgeKind.Association, "association", EdgeType.Association);
+        let thisNodeId: NodeId = this.graph.addVertex(VertexType.Parameter);
+        this.graph.addEdge(thisNodeId, methodStartNodeId, EdgeKind.Association, "association (pos:0)", EdgeType.Association);
         this.symbolTable.addSymbol('this', thisNodeId, false, true);
         this.processParameters(methodDecl.parameters, methodStartNodeId);
 
@@ -610,8 +610,8 @@ class Analyzer {
         this.symbolTable.addNewScope();
         this.functionsStack.unshift(funcStartNodeId);
 
-        let thisNodeId: NodeId = this.graph.addVertex(VertexType.Parameter, {pos: 0});
-        this.graph.addEdge(thisNodeId, funcStartNodeId, EdgeKind.Association, "association", EdgeType.Association);
+        let thisNodeId: NodeId = this.graph.addVertex(VertexType.Parameter);
+        this.graph.addEdge(thisNodeId, funcStartNodeId, EdgeKind.Association, "association (pos:0)", EdgeType.Association);
         this.symbolTable.addSymbol('this', thisNodeId, false, true);
         this.processParameters(funcExp.parameters, funcStartNodeId);
         this.processBlockStatements((funcExp.body as ts.Block).statements);

@@ -53,15 +53,13 @@ export class ConstVertex extends DataVertex {
 }
 
 export class ParameterVertex extends DataVertex {
-    public pos: number;
 
-    constructor(_pos: number) {
+    constructor() {
         super();
-        this.pos = _pos;
     }
 
     public getLabel(): string {
-        return this.getLabelPrefix() + "param (" + String(this.pos) + ")";
+        return this.getLabelPrefix() + "param";
     }
 }
 
