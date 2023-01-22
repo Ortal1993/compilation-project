@@ -15,7 +15,7 @@ dataVertex(nodeId, label) :- vertex(nodeId, "data", label).
 startVertex(nodeId) :- controlVertex(nodeId, label), match("[0-9]+ \\x7c start (.*)", label).
 
 .decl paramVertex(nodeId:number)
-paramVertex(nodeId) :- dataVertex(nodeId, label), match("[0-9]+ \\x7c param (.*)", label).
+paramVertex(nodeId) :- dataVertex(nodeId, label), match("[0-9]+ \\x7c param", label).
 
 .decl loadVertex(nodeId:number)
 loadVertex(nodeId) :- controlVertex(nodeId, label), match("[0-9]+ \\x7c load", label).
@@ -63,15 +63,66 @@ trueNodeId != falseNodeId,
 arrayParameterDelta(trueNodeId, arrayParameterNodeId, trueDelta),
 arrayParameterDelta(falseNodeId, arrayParameterNodeId, falseDelta).
 
-.decl arrayParameterDelta(controlNodeId:number, 
-                          arrayParameterNodeId:number, 
-                          delta:number)
+.decl controlPath(srcNodeId:number, dstNodeId:number)
+.output controlPath(filename="controlPath.csv", delimiter=",")
+
+controlPath(srcNodeId, dstNodeId) :-
+controlNeighbors(srcNodeId, dstNodeId).
+
+controlPath(srcNodeId, dstNodeId) :-
+controlPath(srcNodeId, middleNodeId),
+controlPath(middleNodeId, dstNodeId).
+
+.decl lastControlNodeId(functionNodeId:number, controlNodeId:number, arrayParameterPosition:symbol, delta:number)
+.output lastControlNodeId(filename="lastControlNodeId.csv", delimiter=",")
+
+lastControlNodeId(functionNodeId, controlNodeId, arrayParameterPosition, delta) :-
+startVertex(functionNodeId),
+controlPath(functionNodeId, controlNodeId),
+!edge(controlNodeId, _, "control", _, _),
+arrayParameterDelta(controlNodeId, arrayParameterNodeId, delta),
+edge(arrayParameterNodeId, functionNodeId, "association", parameterAssociationLabel, "association"),
+arrayParameterPosition = substr(parameterAssociationLabel, positionStartIndex, positionStrlen),
+positionStartIndex = strlen("association (pos:"),
+positionStrlen = strlen(parameterAssociationLabel) - strlen("association (pos:)").
+
+.decl functionFinalDelta(functionNodeId:number, arrayParameterPosition:symbol, delta:number)
+.output functionFinalDelta(filename="functionFinalDelta.csv", delimiter=",")
+
+functionFinalDelta(functionNodeId, arrayParameterPosition, minDelta) :-
+minDelta = min delta : lastControlNodeId(functionNodeId, _, arrayParameterPosition, delta),
+maxDelta = max delta : lastControlNodeId(functionNodeId, _, arrayParameterPosition, delta),
+lastControlNodeId(functionNodeId, _, arrayParameterPosition, _),
+minDelta = maxDelta.
+
+functionFinalDelta(functionNodeId, arrayParameterPosition, 999) :-
+minDelta = min delta : lastControlNodeId(functionNodeId, _, arrayParameterPosition, delta),
+maxDelta = max delta : lastControlNodeId(functionNodeId, _, arrayParameterPosition, delta),
+lastControlNodeId(functionNodeId, _, arrayParameterPosition, _),
+minDelta != maxDelta.
+
+// catches function callings where the callee gets an array as a parameter
+.decl functionCallWithArrayAsArgument(callNodeId:number, arrayParameterNodeId:number, delta:number)
+.output functionCallWithArrayAsArgument(filename="functionCallWithArrayAsArgument.csv", delimiter=",")
+
+functionCallWithArrayAsArgument(callNodeId, arrayParameterNodeId, delta) :-
+callVertex(callNodeId),
+paramVertex(arrayParameterNodeId),
+edge(arrayParameterNodeId, callNodeId, "data", paramToCallLabel, _),
+"pos:" = substr(paramToCallLabel, 0, strlen("pos:")),
+arrayParameterPosition = substr(paramToCallLabel, strlen("pos:"), strlen(paramToCallLabel) - strlen("pos: ")),
+edge(callableSymbolNodeId, callNodeId, "data", "callable", _),
+edge(callableFunctionNodeId, callableSymbolNodeId, "association", "association", "association"),
+functionFinalDelta(callableFunctionNodeId, arrayParameterPosition, delta).
+
+.decl arrayParameterDelta(controlNodeId:number, arrayParameterNodeId:number, delta:number) // when delta == 999 it means TOP
 .output arrayParameterDelta(filename="output.csv", delimiter=",")
 
+// the delta is 0 for each parameter at the start vertex
 arrayParameterDelta(controlNodeId, arrayParameterNodeId, 0) :- 
 functionParameter(controlNodeId, arrayParameterNodeId).
 
-//if controlNodeId is call of changing methods
+// if controlNodeId is a call vertex of one of the array changing methods (and directly changes the array)
 arrayParameterDelta(controlNodeId, arrayParameterNodeId, delta) :-
 controlNeighbors(previousControlNodeId, controlNodeId),
 arrayParameterDelta(previousControlNodeId, arrayParameterNodeId, previousDelta),
@@ -79,25 +130,35 @@ previousDelta != 999,
 changingMethodCalling(arrayParameterNodeId, controlNodeId, currDelta),
 delta = previousDelta + currDelta.
 
+// if controlNodeId is a call vertex of one of the array changing methods, and the previous delta is TOP, we want
+// the current delta to be TOP also
 arrayParameterDelta(controlNodeId, arrayParameterNodeId, 999) :-
 controlNeighbors(previousControlNodeId, controlNodeId),
 arrayParameterDelta(previousControlNodeId, arrayParameterNodeId, previousDelta),
 previousDelta = 999,
 changingMethodCalling(arrayParameterNodeId, controlNodeId, _).
 
-//else
+// a regular control vertex (not merge vertex) which does nothing
 arrayParameterDelta(controlNodeId, arrayParameterNodeId, previousDelta) :-
 !mergeVertex(controlNodeId),
 controlNeighbors(previousControlNodeId, controlNodeId),
 arrayParameterDelta(previousControlNodeId, arrayParameterNodeId, previousDelta),
-!changingMethodCalling(arrayParameterNodeId, controlNodeId, _).
+!changingMethodCalling(arrayParameterNodeId, controlNodeId, _),
+!functionCallWithArrayAsArgument(controlNodeId, arrayParameterNodeId, _).
 
+// if controlNodeId is a function call which takes the array as an argument 
+arrayParameterDelta(controlNodeId, arrayParameterNodeId, delta) :-
+controlNeighbors(previousControlNodeId, controlNodeId),
+arrayParameterDelta(previousControlNodeId, arrayParameterNodeId, previousDelta),
+functionCallWithArrayAsArgument(callNodeId, arrayParameterNodeId, currDelta),
+delta = previousDelta + currDelta.
+
+// a merge vertex with two delta-identical branchs
 arrayParameterDelta(controlNodeId, arrayParameterNodeId, trueDelta) :-
 mergeDelta(controlNodeId, arrayParameterNodeId, trueDelta, falseDelta),
 trueDelta = falseDelta.
 
-//merge that merges trueDelta and falseDelta which are different so we need to set delta to "Top"
-//"Top" is 999
+// a merge vertex with two delta-not-identical branchs
 arrayParameterDelta(controlNodeId, arrayParameterNodeId, 999) :-
 mergeDelta(controlNodeId, arrayParameterNodeId, trueDelta, falseDelta),
 trueDelta != falseDelta.

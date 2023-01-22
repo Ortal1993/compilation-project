@@ -64,7 +64,7 @@ export class Graph {
                 newVertex = new vertex.ConstVertex(properties["value"]);
                 break;
             case VertexType.Parameter:
-                newVertex = new vertex.ParameterVertex(properties["pos"]);
+                newVertex = new vertex.ParameterVertex();
                 break;
             case VertexType.BinaryOperation:
                 newVertex = new vertex.BinaryOperationVertex(properties["operation"]);
