@@ -211,7 +211,7 @@ class Stages:
 
         with open(graph_path, 'r') as graph_file:
             graph = graph_file.readlines()
-        
+
         control_to_params = {}
         for output_line in analysis_output:
             control_node_id, parameter_node_id, delta = output_line.strip('\n').split(',')
@@ -225,15 +225,14 @@ class Stages:
             for param, delta in params:
                 append_to_label += f'\np({param}):d({delta})'
 
-            for line_index, graph_line in enumerate(graph):
-                pattern = r'\s*(\d+) \[ (label="\d+ \| .+") (shape=".+") \]'
+            for index, graph_line in enumerate(graph):
+                pattern = r'\s*(\d+) \[ label="(.+)" shape=".+" \]'
                 match = re.match(pattern, graph_line)
                 if match is not None and match[1] == control_node_id:
                     current_label = match[2]
-                    current_shape = match[3]
-                    new_properties = f'[ {current_label[:-1]}{append_to_label}" {current_shape} ]'
-                    new_graph_line = re.sub(r'\[ (label="\d+ \| .+") (shape=".+") \]', new_properties, graph_line)
-                    graph[line_index] = new_graph_line
+                    new_label = current_label + append_to_label
+                    graph[index] = graph_line.replace(current_label, new_label)
+                    break
 
         with open(graph_path, 'w') as graph_file:
             graph_file.writelines(graph)
