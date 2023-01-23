@@ -22,7 +22,7 @@ def parse_args():
                     help='Build the graph for the input file named <INPUT> (default: do not build the graph)')
     ap.add_argument('-g', '--graph-output', dest='graph_name', default='graph.txt', metavar='GRAPH_NAME',
                     help='Save the graph inside file named <GRAPH_NAME> (default: graph.txt)')
-    ap.add_argument('-a', '--analyze', dest='analyze_type', choices=list(Stages.get_analysis_types().keys()),
+    ap.add_argument('-a', '--analyze', dest='analysis_type', choices=list(Analyzer.get_analysis_types().keys()),
                     help='Run analysis on the graph')
     ap.add_argument('-v', '--verbose', dest='verbose', action='store_true', default=False,
                     help='Print logs and output results')
@@ -94,13 +94,84 @@ class Config:
         self.samples = args.samples
         self.inputs = args.inputs
         self.graph_name = args.graph_name
-        self.analyze_type = args.analyze_type
+        self.analysis_type = args.analysis_type
         self.verbose = args.verbose
         self.clean = args.clean
         self.test = args.test
         self.update_goldens = args.update_goldens
         self.paths = Paths()
 
+class Analyzer:
+    def __init__(self, cfg, log):
+        self.cfg = cfg
+        self.log = log
+
+    def run(self):
+        analysis_types = Analyzer.get_analysis_types()
+        analysis_types[self.cfg.analysis_type](self)
+
+    @classmethod
+    def get_analysis_types(cls):
+        return {
+            'array_size': cls._run_array_size_analysis
+        }
+
+    def _run_array_size_analysis(self):
+        analysis_file = os.path.join(self.cfg.paths.analysis_dir, 'array_size.dl')
+        analysis_cmd = [
+            'souffle',
+            '-F', self.cfg.paths.output_dir,
+            '-D', self.cfg.paths.output_dir,
+            analysis_file
+        ]
+
+        if self.cfg.verbose:
+            self.log.command('Running analyzer', ' '.join(analysis_cmd))
+
+        try:
+            subprocess.run(analysis_cmd, check=True)
+        except subprocess.CalledProcessError as e:
+            self.log.error('Analyzer failed', e.returncode)
+        else:
+            if self.cfg.verbose:
+                self.log.info('Analyzer finished successfully', format=[Format.GREEN])
+
+        self._parse_array_size_analysis_output()
+    
+    def _parse_array_size_analysis_output(self):
+        delta_in_control_output_path = os.path.join(self.cfg.paths.output_dir, 'delta_in_control.csv')
+        graph_path = os.path.join(self.cfg.paths.output_dir, self.cfg.graph_name)
+
+        with open(delta_in_control_output_path, 'r') as delta_in_control_output_file:
+            delta_in_control_output = delta_in_control_output_file.readlines()
+
+        with open(graph_path, 'r') as graph_file:
+            graph = graph_file.readlines()
+
+        control_to_params = {}
+        for delta_in_control_output_line in delta_in_control_output:
+            control_node_id, parameter_node_id, delta = delta_in_control_output_line.strip('\n').split(',')
+            if delta == '999':
+                delta = 'T'
+            control_to_params.setdefault(control_node_id, [])
+            control_to_params[control_node_id].append((parameter_node_id, delta))
+
+        for control_node_id, params in control_to_params.items():
+            append_to_label = ''
+            for param, delta in params:
+                append_to_label += f'\np({param}):d({delta})'
+
+            for index, graph_line in enumerate(graph):
+                pattern = r'\s*(\d+) \[ label="(.+)" shape=".+" \]'
+                match = re.match(pattern, graph_line)
+                if match is not None and match[1] == control_node_id:
+                    current_label = match[2]
+                    new_label = current_label + append_to_label
+                    graph[index] = graph_line.replace(current_label, new_label)
+                    break
+
+        with open(graph_path, 'w') as graph_file:
+            graph_file.writelines(graph)
 
 class Stages:
     def __init__(self, args):
@@ -173,74 +244,14 @@ class Stages:
                 self.log.info('The graph was built successfully', format=[Format.GREEN])
 
     def analyze(self):
-        if self.cfg.analyze_type is None:
+        if self.cfg.analysis_type is None:
             return
 
-        analysis_types = self.get_analysis_types()
-        analysis_types[self.cfg.analyze_type](self)
+        analyzer = Analyzer(self.cfg, self.log)
+        analyzer.run()
 
     def finish(self):
         self.log.info(f'Output files path: {self.cfg.paths.output_dir}', format=[Format.BOLD], prefix=False)
-
-    @classmethod
-    def get_analysis_types(cls):
-        return {
-            'array_size': cls._run_array_size_analysis
-        }
-
-    def _run_array_size_analysis(self):
-        analysis_file = os.path.join(self.cfg.paths.analysis_dir, 'array_size.dl')
-        analysis_cmd = ['souffle',
-                        '-F', self.cfg.paths.output_dir,
-                        '-D', self.cfg.paths.output_dir,
-                        analysis_file]
-
-        if self.cfg.verbose:
-            self.log.command('Running analyzer', ' '.join(analysis_cmd))
-
-        try:
-            subprocess.run(analysis_cmd, check=True)
-        except subprocess.CalledProcessError as e:
-            self.log.error('Analyzer failed', e.returncode)
-        else:
-            if self.cfg.verbose:
-                self.log.info('Analyzer finished successfully', format=[Format.GREEN])
-
-        analysis_output_path = os.path.join(self.cfg.paths.output_dir, 'output.csv')
-        graph_path = os.path.join(self.cfg.paths.output_dir, self.cfg.graph_name)
-        self._parse_array_size_analysis_output(analysis_output_path, graph_path)
-    
-    def _parse_array_size_analysis_output(self, analysis_output_path, graph_path):
-        with open(analysis_output_path, 'r') as output_file:
-            analysis_output = output_file.readlines()
-
-        with open(graph_path, 'r') as graph_file:
-            graph = graph_file.readlines()
-
-        control_to_params = {}
-        for output_line in analysis_output:
-            control_node_id, parameter_node_id, delta = output_line.strip('\n').split(',')
-            if delta == '999':
-                delta = 'T'
-            control_to_params.setdefault(control_node_id, [])
-            control_to_params[control_node_id].append((parameter_node_id, delta))
-
-        for control_node_id, params in control_to_params.items():
-            append_to_label = ''
-            for param, delta in params:
-                append_to_label += f'\np({param}):d({delta})'
-
-            for index, graph_line in enumerate(graph):
-                pattern = r'\s*(\d+) \[ label="(.+)" shape=".+" \]'
-                match = re.match(pattern, graph_line)
-                if match is not None and match[1] == control_node_id:
-                    current_label = match[2]
-                    new_label = current_label + append_to_label
-                    graph[index] = graph_line.replace(current_label, new_label)
-                    break
-
-        with open(graph_path, 'w') as graph_file:
-            graph_file.writelines(graph)
 
     def _test(self):
         any_failed = False
