@@ -227,7 +227,7 @@ class Analyzer {
         this.symbolTable.addNewScope();
         this.functionsStack.unshift(methodStartNodeId);
 
-        let thisNodeId: NodeId = this.graph.addVertex(VertexType.Parameter, {pos: 0, funcId: methodStartNodeId});
+        let thisNodeId: NodeId = this.graph.addVertex(VertexType.Parameter, {pos: 0});
         this.graph.addEdge(thisNodeId, methodStartNodeId, EdgeKind.Association, "association", EdgeType.Association);
         this.symbolTable.addSymbol('this', thisNodeId);
         this.processParameters(methodDecl.parameters, methodStartNodeId);
