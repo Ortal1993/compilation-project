@@ -302,7 +302,7 @@ class Analyzer {
         }
     }
 
-    private prepareForWhileStatementPatching(symbolTableCopy: Map<string, NodeId>, ): [NodeId, Map<NodeId, string>] {
+    private prepareForWhileStatementPatching(symbolTableCopy: Map<string, NodeId>): [NodeId, Map<NodeId, string>] {
         let previousPatchingVariablesCounter: NodeId = this.patchingVariablesCounter;
         let patchingIdToVarName: Map<NodeId, string> = new Map<NodeId, string>();
         symbolTableCopy.forEach((nodeId: NodeId, varName: string) => {
@@ -316,9 +316,11 @@ class Analyzer {
     private whileStatementPatching(patchingIdToVarName: Map<NodeId, string>): void {
         let edgesWithNegativeSource: Array<Edge> = this.graph.getEdgesWithNegativeSource();
         edgesWithNegativeSource.forEach((edge: Edge) => {
-            let varName: string = patchingIdToVarName.get(edge.srcId) as string;
-            let nodeId: NodeId = this.symbolTable.getIdByName(varName);
-            edge.srcId = nodeId;
+            if (patchingIdToVarName.has(edge.srcId)) {
+                let varName: string = patchingIdToVarName.get(edge.srcId) as string;
+                let nodeId: NodeId = this.symbolTable.getIdByName(varName);
+                edge.srcId = nodeId;
+            }
         });
     }
 
