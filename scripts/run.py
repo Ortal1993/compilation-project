@@ -137,29 +137,45 @@ class Analyzer:
                 self.log.info('Analyzer finished successfully', format=[Format.GREEN])
 
         self._parse_array_size_analysis_output()
-    
+
     def _parse_array_size_analysis_output(self):
         delta_in_control_output_path = os.path.join(self.cfg.paths.output_dir, 'delta_in_control.csv')
+        function_final_delta_output_path = os.path.join(self.cfg.paths.output_dir, 'function_final_delta.csv')
         graph_path = os.path.join(self.cfg.paths.output_dir, self.cfg.graph_name)
 
         with open(delta_in_control_output_path, 'r') as delta_in_control_output_file:
             delta_in_control_output = delta_in_control_output_file.readlines()
 
+        with open(function_final_delta_output_path, 'r') as function_final_delta_output_file:
+            function_final_delta_output = function_final_delta_output_file.readlines()
+
         with open(graph_path, 'r') as graph_file:
             graph = graph_file.readlines()
 
-        control_to_params = {}
+        delta_in_control = {}
         for delta_in_control_output_line in delta_in_control_output:
             control_node_id, parameter_node_id, delta = delta_in_control_output_line.strip('\n').split(',')
             if delta == '999':
                 delta = 'T'
-            control_to_params.setdefault(control_node_id, [])
-            control_to_params[control_node_id].append((parameter_node_id, delta))
+            delta_in_control.setdefault(control_node_id, [])
+            delta_in_control[control_node_id].append((parameter_node_id, delta))
 
-        for control_node_id, params in control_to_params.items():
+        function_final_delta = {}
+        for function_final_delta_output_line in function_final_delta_output:
+            function_node_id, parameter_node_id, delta = function_final_delta_output_line.strip('\n').split(',')
+            if delta == '999':
+                delta = 'T'
+            function_final_delta.setdefault(function_node_id, [])
+            function_final_delta[function_node_id].append((parameter_node_id, delta))
+
+        for control_node_id, params in delta_in_control.items():
             append_to_label = ''
             for param, delta in params:
                 append_to_label += f'\np({param}):d({delta})'
+            if control_node_id in function_final_delta:
+                append_to_label += '\n--------\nfinal delta'
+                for param, delta in function_final_delta[control_node_id]:
+                    append_to_label += f'\np({param}):d({delta})'
 
             for index, graph_line in enumerate(graph):
                 pattern = r'\s*(\d+) \[ label="(.+)" shape=".+" \]'
