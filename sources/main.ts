@@ -147,7 +147,7 @@ class Analyzer {
             let parameterName: string = (parameter.name as any).escapedText;
             let parameterNodeId: NodeId = this.graph.addVertex(VertexType.Parameter, {pos: position + 1});
             this.graph.addEdge(parameterNodeId, startNodeId, "association", EdgeType.Association);
-            this.symbolTable.addSymbol(parameterName, parameterNodeId, false, true);
+            this.symbolTable.addSymbol(parameterName, parameterNodeId);
         });
     }
 
@@ -178,7 +178,7 @@ class Analyzer {
     private processFunctionDeclaration(funcDeclaration: ts.FunctionDeclaration): void {
         let funcName: string = (funcDeclaration.name as any).escapedText;
         let funcSymbolNodeId: NodeId = this.graph.addVertex(VertexType.Symbol, {name: funcName});
-        this.symbolTable.addSymbol(funcName, funcSymbolNodeId, true);
+        this.symbolTable.addSymbol(funcName, funcSymbolNodeId);
     }
 
     private processClassDeclaration(classDeclaration: ts.ClassDeclaration): void {
@@ -214,7 +214,7 @@ class Analyzer {
         let methodStartNodeId: NodeId = this.graph.addVertex(VertexType.Start, {name: methodName});
         // This symbol is not used, but adding it
         // to the symbol table does no harm
-        this.symbolTable.addSymbol(methodName, methodStartNodeId, true);
+        this.symbolTable.addSymbol(methodName, methodStartNodeId);
         let prevControlVertex: NodeId = this.controlVertex;
         this.controlVertex = methodStartNodeId;
 
@@ -223,7 +223,7 @@ class Analyzer {
 
         let thisNodeId: NodeId = this.graph.addVertex(VertexType.Parameter, {pos: 0, funcId: methodStartNodeId});
         this.graph.addEdge(thisNodeId, methodStartNodeId, "association", EdgeType.Association);
-        this.symbolTable.addSymbol('this', thisNodeId, false, true);
+        this.symbolTable.addSymbol('this', thisNodeId);
         this.processParameters(methodDecl.parameters, methodStartNodeId);
 
         this.processBlockStatements((methodDecl.body as ts.Block).statements);
@@ -507,12 +507,11 @@ class Analyzer {
 
         if (varDecl.initializer !== undefined) {
             let expNodeId: NodeId = this.processExpression(varDecl.initializer as ts.Expression);
-            this.symbolTable.addSymbol(varName, expNodeId, false, true);
+            this.symbolTable.addSymbol(varName, expNodeId);
         }
         else {
-            this.symbolTable.addSymbol(varName, 0, false, false);
+            this.symbolTable.addSymbol(varName, 0);
         }
-        
     }
 
     private processExpression(expression: ts.Expression): NodeId {
@@ -610,7 +609,7 @@ class Analyzer {
 
         let thisNodeId: NodeId = this.graph.addVertex(VertexType.Parameter, {pos: 0});
         this.graph.addEdge(thisNodeId, funcStartNodeId, "association", EdgeType.Association);
-        this.symbolTable.addSymbol('this', thisNodeId, false, true);
+        this.symbolTable.addSymbol('this', thisNodeId);
         this.processParameters(funcExp.parameters, funcStartNodeId);
         this.processBlockStatements((funcExp.body as ts.Block).statements);
 

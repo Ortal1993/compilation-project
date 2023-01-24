@@ -3,14 +3,10 @@ import { NodeId } from "./types";
 class Entry {
     private name: string;
     private nodeId: NodeId;
-    private func: boolean;
-    private init: boolean;
 
-    public constructor(_name: string, _nodeId: NodeId, _func: boolean, _init: boolean) {
+    public constructor(_name: string, _nodeId: NodeId) {
         this.name = _name;
         this.nodeId = _nodeId;
-        this.func = _func;
-        this.init = _init;
     }
 
     public getName(): string {
@@ -21,17 +17,8 @@ class Entry {
         return this.nodeId;
     }
 
-    public isFunc(): boolean {
-        return this.func;
-    }
-
-    public isInit(): boolean {
-        return this.init;
-    }
-
     public updateNodeId(newNodeId: NodeId): void {
         this.nodeId = newNodeId;
-        this.init = true;
     }    
 }
 
@@ -68,24 +55,8 @@ class Scope {
         return entry.getNodeId();
     }
 
-    public getEntryFunc(name: string): boolean | undefined {
-        let entry: Entry | undefined = this.getEntry(name);
-        if (entry === undefined) {
-            return undefined;
-        }
-        return entry.isFunc();
-    }
-
-    public getEntryInit(name: string): boolean | undefined {
-        let entry: Entry | undefined = this.getEntry(name);
-        if (entry === undefined) {
-            return undefined;
-        }
-        return entry.isInit();
-    }
-
-    public addEntry(name: string, nodeId: NodeId, func: boolean, init: boolean): void {
-        let newEntry: Entry = new Entry(name, nodeId, func, init);
+    public addEntry(name: string, nodeId: NodeId): void {
+        let newEntry: Entry = new Entry(name, nodeId);
         this.entries.unshift(newEntry);
     }
 
@@ -99,7 +70,7 @@ class Scope {
     //varNames - all the variables that can change in if blocks
     public getCopy(varNames: Set<string> | null, symbolTableCopy: Map<string, NodeId>) {
         this.entries.forEach((entry: Entry) => {
-            if ((varNames === null || varNames.has(entry.getName())) && !symbolTableCopy.has(entry.getName()) && !entry.isFunc()) {
+            if ((varNames === null || varNames.has(entry.getName())) && !symbolTableCopy.has(entry.getName())) {
                 symbolTableCopy.set(entry.getName(), entry.getNodeId());
             }
         });
@@ -142,12 +113,12 @@ export class SymbolTable {
         }
     }
 
-    public addSymbol(name: string, nodeId: NodeId, func: boolean = false, init: boolean = false): void {
+    public addSymbol(name: string, nodeId: NodeId): void {
         let currentScope: Scope = this.getCurrentScope();
         if (currentScope.isEntryExists(name)) {
             throw new Error(`Symbol '${name}' already exists in the symbol table`);
         }
-        currentScope.addEntry(name, nodeId, func, init);
+        currentScope.addEntry(name, nodeId);
     }
 
     public getIdByName(name: string): NodeId {
