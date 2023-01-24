@@ -64,15 +64,15 @@ incomingControlEdgesToVertex(mergeNodeId, 2),
 controlNeighbors(firstNodeId, mergeNodeId),
 controlNeighbors(secondNodeId, mergeNodeId),
 firstNodeId != secondNodeId,
-deltaInControlNodeId(firstNodeId, arrayParameterNodeId, firstDelta),
-deltaInControlNodeId(secondNodeId, arrayParameterNodeId, secondDelta).
+deltaInControlNodeIdAux(firstNodeId, arrayParameterNodeId, firstDelta),
+deltaInControlNodeIdAux(secondNodeId, arrayParameterNodeId, secondDelta).
 
 // to track cases where there is only one incoming edge into a merge vertex
 deltasInMergeBranchs(mergeNodeId, arrayParameterNodeId, delta, delta) :-
 mergeVertex(mergeNodeId),
 incomingControlEdgesToVertex(mergeNodeId, 1),
 controlNeighbors(previousNodeId, mergeNodeId),
-deltaInControlNodeId(previousNodeId, arrayParameterNodeId, delta).
+deltaInControlNodeIdAux(previousNodeId, arrayParameterNodeId, delta).
 
 .decl controlPath(srcNodeId:number, dstNodeId:number)
 
@@ -120,52 +120,75 @@ minDelta != maxDelta.
 // edge(callableFunctionNodeId, callableSymbolNodeId, "association", "association", "association"),
 // functionFinalDelta(callableFunctionNodeId, arrayParameterPosition, delta).
 
-.decl deltaInControlNodeId(controlNodeId:number, arrayParameterNodeId:number, delta:number)
-.output deltaInControlNodeId(filename="delta_in_control.csv", delimiter=",")
+.decl deltaInControlNodeIdAux(controlNodeId:number, arrayParameterNodeId:number, delta:number)
 
 // the delta is 0 for each parameter at the start vertex
-deltaInControlNodeId(controlNodeId, arrayParameterNodeId, 0) :- 
+deltaInControlNodeIdAux(controlNodeId, arrayParameterNodeId, 0) :- 
 arrayParameterInFunction(controlNodeId, arrayParameterNodeId).
 
 // if controlNodeId is a call vertex of one of the array methods
-deltaInControlNodeId(controlNodeId, arrayParameterNodeId, delta) :-
+deltaInControlNodeIdAux(controlNodeId, arrayParameterNodeId, delta) :-
 controlNeighbors(previousControlNodeId, controlNodeId),
-deltaInControlNodeId(previousControlNodeId, arrayParameterNodeId, previousDelta),
+deltaInControlNodeIdAux(previousControlNodeId, arrayParameterNodeId, previousDelta),
 previousDelta != 999,
 arrayMethodCalling(arrayParameterNodeId, controlNodeId, currDelta),
 delta = previousDelta + currDelta.
 
 // if controlNodeId is a call vertex of one of the array methods, and the previous delta is TOP, we want
 // the current delta to be TOP also
-deltaInControlNodeId(controlNodeId, arrayParameterNodeId, 999) :-
+deltaInControlNodeIdAux(controlNodeId, arrayParameterNodeId, 999) :-
 controlNeighbors(previousControlNodeId, controlNodeId),
-deltaInControlNodeId(previousControlNodeId, arrayParameterNodeId, previousDelta),
+deltaInControlNodeIdAux(previousControlNodeId, arrayParameterNodeId, previousDelta),
 previousDelta = 999,
 arrayMethodCalling(arrayParameterNodeId, controlNodeId, _).
 
 // a regular control vertex (not a merge vertex) which does nothing
-deltaInControlNodeId(controlNodeId, arrayParameterNodeId, previousDelta) :-
+deltaInControlNodeIdAux(controlNodeId, arrayParameterNodeId, previousDelta) :-
 !mergeVertex(controlNodeId),
 controlNeighbors(previousControlNodeId, controlNodeId),
-deltaInControlNodeId(previousControlNodeId, arrayParameterNodeId, previousDelta),
+deltaInControlNodeIdAux(previousControlNodeId, arrayParameterNodeId, previousDelta),
 !arrayMethodCalling(arrayParameterNodeId, controlNodeId, _).
 // // TODO: not supported yet because souffle detects a dependency cycle between relations
 // !functionCallWithArrayAsArgument(controlNodeId, arrayParameterNodeId, _)
 
 // // TODO: not supported yet because souffle detects a dependency cycle between relations
 // // if controlNodeId is a function call which takes the array as an argument
-// deltaInControlNodeId(controlNodeId, arrayParameterNodeId, delta) :-
+// deltaInControlNodeIdAux(controlNodeId, arrayParameterNodeId, delta) :-
 // controlNeighbors(previousControlNodeId, controlNodeId),
-// deltaInControlNodeId(previousControlNodeId, arrayParameterNodeId, previousDelta),
+// deltaInControlNodeIdAux(previousControlNodeId, arrayParameterNodeId, previousDelta),
 // functionCallWithArrayAsArgument(callNodeId, arrayParameterNodeId, currDelta),
 // delta = previousDelta + currDelta.
 
 // a merge vertex with two delta-identical branchs
-deltaInControlNodeId(controlNodeId, arrayParameterNodeId, trueDelta) :-
+deltaInControlNodeIdAux(controlNodeId, arrayParameterNodeId, trueDelta) :-
 deltasInMergeBranchs(controlNodeId, arrayParameterNodeId, trueDelta, falseDelta),
 trueDelta = falseDelta.
 
 // a merge vertex with two delta-not-identical branchs
-deltaInControlNodeId(controlNodeId, arrayParameterNodeId, 999) :-
+deltaInControlNodeIdAux(controlNodeId, arrayParameterNodeId, 999) :-
 deltasInMergeBranchs(controlNodeId, arrayParameterNodeId, trueDelta, falseDelta),
-trueDelta != falseDelta.
+trueDelta != falseDelta,
+trueDelta > -500, falseDelta > -500. // trueDelta and falseDelta are probably both not B
+
+deltaInControlNodeIdAux(controlNodeId, arrayParameterNodeId, falseDelta) :-
+deltasInMergeBranchs(controlNodeId, arrayParameterNodeId, trueDelta, falseDelta),
+trueDelta != falseDelta,
+trueDelta <= -500. // trueDelta is probably B
+
+deltaInControlNodeIdAux(controlNodeId, arrayParameterNodeId, trueDelta) :-
+deltasInMergeBranchs(controlNodeId, arrayParameterNodeId, trueDelta, falseDelta),
+trueDelta != falseDelta,
+falseDelta <= -500. // falseDelta is probably B
+
+// initialize every delta to B
+deltaInControlNodeIdAux(controlNodeId, arrayParameterNodeId, -999) :- 
+controlVertex(controlNodeId, _),
+arrayParameterInFunction(functionNodeId, arrayParameterNodeId),
+controlPath(functionNodeId, controlNodeId).
+
+.decl deltaInControlNodeId(controlNodeId:number, arrayParameterNodeId:number, delta:number)
+.output deltaInControlNodeId(filename="delta_in_control.csv", delimiter=",")
+
+deltaInControlNodeId(controlNodeId, arrayParameterNodeId, delta) :-
+deltaInControlNodeIdAux(controlNodeId, arrayParameterNodeId, _),
+delta = max currDelta: deltaInControlNodeIdAux(controlNodeId, arrayParameterNodeId, currDelta).

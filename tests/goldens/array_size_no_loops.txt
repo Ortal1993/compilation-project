@@ -1,0 +1,270 @@
+digraph G {
+	0 [ label="0 | start (__entryPoint__)" shape="rectangle" ];
+	1 [ label="1 | #func" shape="rectangle" ];
+	2 [ label="2 | #add" shape="rectangle" ];
+	3 [ label="3 | start (func)
+p(4):d(0)
+p(5):d(0)
+p(6):d(0)
+--------
+final delta
+p(4):d(T)
+p(5):d(T)
+p(6):d(1)" shape="rectangle" ];
+	4 [ label="4 | param (1)" shape="rectangle" ];
+	5 [ label="5 | param (2)" shape="rectangle" ];
+	6 [ label="6 | param (3)" shape="rectangle" ];
+	7 [ label="7 | true" shape="rectangle" ];
+	8 [ label="8 | if
+p(4):d(0)
+p(5):d(0)
+p(6):d(0)" shape="rectangle" ];
+	9 [ label="9 | merge
+p(4):d(0)
+p(5):d(0)
+p(6):d(0)" shape="rectangle" ];
+	10 [ label="10 | call
+p(4):d(0)
+p(5):d(0)
+p(6):d(1)" shape="rectangle" ];
+	11 [ label="11 | 5" shape="rectangle" ];
+	12 [ label="12 | #push" shape="rectangle" ];
+	13 [ label="13 | load
+p(4):d(0)
+p(5):d(0)
+p(6):d(0)" shape="rectangle" ];
+	14 [ label="14 | return
+p(4):d(0)
+p(5):d(0)
+p(6):d(1)" shape="rectangle" ];
+	15 [ label="15 | dummy
+p(4):d(0)
+p(5):d(0)
+p(6):d(0)" shape="rectangle" ];
+	16 [ label="16 | if
+p(4):d(0)
+p(5):d(0)
+p(6):d(0)" shape="rectangle" ];
+	17 [ label="17 | merge
+p(4):d(1)
+p(5):d(T)
+p(6):d(1)" shape="rectangle" ];
+	18 [ label="18 | call
+p(4):d(1)
+p(5):d(0)
+p(6):d(0)" shape="rectangle" ];
+	19 [ label="19 | 1" shape="rectangle" ];
+	20 [ label="20 | load
+p(4):d(0)
+p(5):d(0)
+p(6):d(0)" shape="rectangle" ];
+	21 [ label="21 | call
+p(4):d(1)
+p(5):d(-1)
+p(6):d(0)" shape="rectangle" ];
+	22 [ label="22 | #pop" shape="rectangle" ];
+	23 [ label="23 | load
+p(4):d(1)
+p(5):d(0)
+p(6):d(0)" shape="rectangle" ];
+	24 [ label="24 | call
+p(4):d(1)
+p(5):d(-1)
+p(6):d(1)" shape="rectangle" ];
+	25 [ label="25 | load
+p(4):d(1)
+p(5):d(-1)
+p(6):d(0)" shape="rectangle" ];
+	26 [ label="26 | call
+p(4):d(1)
+p(5):d(0)
+p(6):d(0)" shape="rectangle" ];
+	27 [ label="27 | load
+p(4):d(0)
+p(5):d(0)
+p(6):d(0)" shape="rectangle" ];
+	28 [ label="28 | call
+p(4):d(1)
+p(5):d(0)
+p(6):d(1)" shape="rectangle" ];
+	29 [ label="29 | 3" shape="rectangle" ];
+	30 [ label="30 | load
+p(4):d(1)
+p(5):d(0)
+p(6):d(0)" shape="rectangle" ];
+	31 [ label="31 | if
+p(4):d(1)
+p(5):d(T)
+p(6):d(1)" shape="rectangle" ];
+	32 [ label="32 | merge
+p(4):d(T)
+p(5):d(T)
+p(6):d(2)" shape="rectangle" ];
+	33 [ label="33 | call
+p(4):d(2)
+p(5):d(T)
+p(6):d(1)" shape="rectangle" ];
+	34 [ label="34 | #unshift" shape="rectangle" ];
+	35 [ label="35 | load
+p(4):d(1)
+p(5):d(T)
+p(6):d(1)" shape="rectangle" ];
+	36 [ label="36 | call
+p(4):d(2)
+p(5):d(T)
+p(6):d(2)" shape="rectangle" ];
+	37 [ label="37 | load
+p(4):d(2)
+p(5):d(T)
+p(6):d(1)" shape="rectangle" ];
+	38 [ label="38 | call
+p(4):d(0)
+p(5):d(T)
+p(6):d(1)" shape="rectangle" ];
+	39 [ label="39 | load
+p(4):d(1)
+p(5):d(T)
+p(6):d(1)" shape="rectangle" ];
+	40 [ label="40 | call
+p(4):d(0)
+p(5):d(T)
+p(6):d(2)" shape="rectangle" ];
+	41 [ label="41 | load
+p(4):d(0)
+p(5):d(T)
+p(6):d(1)" shape="rectangle" ];
+	42 [ label="42 | call
+p(4):d(T)
+p(5):d(T)
+p(6):d(2)" shape="rectangle" ];
+	43 [ label="43 | call
+p(4):d(T)
+p(5):d(T)
+p(6):d(2)" shape="rectangle" ];
+	44 [ label="44 | 2" shape="rectangle" ];
+	45 [ label="45 | load
+p(4):d(T)
+p(5):d(T)
+p(6):d(2)" shape="rectangle" ];
+	46 [ label="46 | call
+p(4):d(T)
+p(5):d(T)
+p(6):d(2)" shape="rectangle" ];
+	47 [ label="47 | load
+p(4):d(T)
+p(5):d(T)
+p(6):d(2)" shape="rectangle" ];
+	48 [ label="48 | call
+p(4):d(T)
+p(5):d(T)
+p(6):d(1)" shape="rectangle" ];
+	49 [ label="49 | #shift" shape="rectangle" ];
+	50 [ label="50 | load
+p(4):d(T)
+p(5):d(T)
+p(6):d(2)" shape="rectangle" ];
+	51 [ label="51 | start (add)" shape="rectangle" ];
+	52 [ label="52 | return" shape="rectangle" ];
+	3 -> 1 [ label="association", style=dashed, dir=none ];
+	4 -> 3 [ label="association", style=dashed, dir=none ];
+	5 -> 3 [ label="association", style=dashed, dir=none ];
+	6 -> 3 [ label="association", style=dashed, dir=none ];
+	3 -> 8 [ label="control" ];
+	7 -> 8 [ label="condition" ];
+	8 -> 9 [ label="association", style=dashed, dir=none ];
+	11 -> 10 [ label="pos: 1" ];
+	8 -> 13 [ label="true-control" ];
+	6 -> 13 [ label="object" ];
+	12 -> 13 [ label="property" ];
+	13 -> 10 [ label="callable" ];
+	13 -> 10 [ label="control" ];
+	14 -> 3 [ label="association", style=dashed, dir=none ];
+	10 -> 14 [ label="control" ];
+	8 -> 15 [ label="false-control" ];
+	15 -> 9 [ label="control" ];
+	9 -> 16 [ label="control" ];
+	7 -> 16 [ label="condition" ];
+	16 -> 17 [ label="association", style=dashed, dir=none ];
+	19 -> 18 [ label="pos: 1" ];
+	16 -> 20 [ label="true-control" ];
+	4 -> 20 [ label="object" ];
+	12 -> 20 [ label="property" ];
+	20 -> 18 [ label="callable" ];
+	20 -> 18 [ label="control" ];
+	18 -> 23 [ label="control" ];
+	5 -> 23 [ label="object" ];
+	22 -> 23 [ label="property" ];
+	23 -> 21 [ label="callable" ];
+	23 -> 21 [ label="control" ];
+	19 -> 24 [ label="pos: 1" ];
+	21 -> 25 [ label="control" ];
+	6 -> 25 [ label="object" ];
+	12 -> 25 [ label="property" ];
+	25 -> 24 [ label="callable" ];
+	25 -> 24 [ label="control" ];
+	24 -> 17 [ label="control" ];
+	19 -> 26 [ label="pos: 1" ];
+	16 -> 27 [ label="false-control" ];
+	4 -> 27 [ label="object" ];
+	12 -> 27 [ label="property" ];
+	27 -> 26 [ label="callable" ];
+	27 -> 26 [ label="control" ];
+	29 -> 28 [ label="pos: 1" ];
+	26 -> 30 [ label="control" ];
+	6 -> 30 [ label="object" ];
+	12 -> 30 [ label="property" ];
+	30 -> 28 [ label="callable" ];
+	30 -> 28 [ label="control" ];
+	28 -> 17 [ label="control" ];
+	17 -> 31 [ label="control" ];
+	7 -> 31 [ label="condition" ];
+	31 -> 32 [ label="association", style=dashed, dir=none ];
+	19 -> 33 [ label="pos: 1" ];
+	31 -> 35 [ label="true-control" ];
+	4 -> 35 [ label="object" ];
+	34 -> 35 [ label="property" ];
+	35 -> 33 [ label="callable" ];
+	35 -> 33 [ label="control" ];
+	11 -> 36 [ label="pos: 1" ];
+	33 -> 37 [ label="control" ];
+	6 -> 37 [ label="object" ];
+	34 -> 37 [ label="property" ];
+	37 -> 36 [ label="callable" ];
+	37 -> 36 [ label="control" ];
+	36 -> 32 [ label="control" ];
+	31 -> 39 [ label="false-control" ];
+	4 -> 39 [ label="object" ];
+	22 -> 39 [ label="property" ];
+	39 -> 38 [ label="callable" ];
+	39 -> 38 [ label="control" ];
+	11 -> 40 [ label="pos: 1" ];
+	38 -> 41 [ label="control" ];
+	6 -> 41 [ label="object" ];
+	34 -> 41 [ label="property" ];
+	41 -> 40 [ label="callable" ];
+	41 -> 40 [ label="control" ];
+	40 -> 32 [ label="control" ];
+	2 -> 42 [ label="callable" ];
+	32 -> 42 [ label="control" ];
+	44 -> 43 [ label="pos: 1" ];
+	42 -> 45 [ label="control" ];
+	5 -> 45 [ label="object" ];
+	12 -> 45 [ label="property" ];
+	45 -> 43 [ label="callable" ];
+	45 -> 43 [ label="control" ];
+	44 -> 46 [ label="pos: 1" ];
+	43 -> 47 [ label="control" ];
+	4 -> 47 [ label="object" ];
+	12 -> 47 [ label="property" ];
+	47 -> 46 [ label="callable" ];
+	47 -> 46 [ label="control" ];
+	46 -> 50 [ label="control" ];
+	6 -> 50 [ label="object" ];
+	49 -> 50 [ label="property" ];
+	50 -> 48 [ label="callable" ];
+	50 -> 48 [ label="control" ];
+	51 -> 2 [ label="association", style=dashed, dir=none ];
+	52 -> 51 [ label="association", style=dashed, dir=none ];
+	51 -> 52 [ label="control" ];
+	11 -> 52 [ label="value" ];
+}
