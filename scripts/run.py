@@ -214,21 +214,21 @@ class Stages:
     def build_project(self):
         if not self.cfg.build_project and not self.cfg.test:
             if self.cfg.verbose:
-                self.log.info('Skipping build stage')
+                self.log.info('Skipping build project stage')
             return
 
         build_cmd = 'tsc'
 
         if self.cfg.verbose:
-            self.log.command('Running build command', build_cmd)
+            self.log.command('Running build project command', build_cmd)
 
         try:
             subprocess.run(build_cmd, check=True)
         except subprocess.CalledProcessError as e:
-            self.log.error('Build failed', e.returncode)
+            self.log.error('Build project failed', e.returncode)
         else:
             if self.cfg.verbose:
-                self.log.info('Build finished successfully', format=[Format.GREEN])
+                self.log.info('Build project finished successfully', format=[Format.GREEN])
 
     def build_graph(self):
         if self.cfg.test:
@@ -267,7 +267,10 @@ class Stages:
         analyzer.run()
 
     def finish(self):
-        self.log.info(f'Output files path: {self.cfg.paths.output_dir}', format=[Format.BOLD], prefix=False)
+        if os.path.isdir(self.cfg.paths.output_dir):
+            self.log.info(f'Output files path: {self.cfg.paths.output_dir}', format=[Format.BOLD], prefix=False)
+        else:
+            self.log.info(f'No output files were generated', format=[Format.BOLD], prefix=False)
 
     def _test(self):
         any_failed = False
