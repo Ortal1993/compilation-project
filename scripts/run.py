@@ -267,6 +267,8 @@ class Stages:
         analyzer.run()
 
     def finish(self):
+        if self.cfg.test:
+            return
         if os.path.isdir(self.cfg.paths.output_dir):
             self.log.info(f'Output files path: {self.cfg.paths.output_dir}', format=[Format.BOLD], prefix=False)
         else:
