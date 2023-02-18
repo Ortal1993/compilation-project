@@ -154,17 +154,21 @@ class Analyzer:
 
         delta_in_control = {}
         for delta_in_control_output_line in delta_in_control_output:
-            control_node_id, parameter_node_id, delta = delta_in_control_output_line.strip('\n').split(',')
-            if delta == '999':
+            control_node_id, parameter_node_id, delta, delta_type = delta_in_control_output_line.strip('\n').split(',')
+            if delta_type == '1':
                 delta = 'T'
+            elif delta_type == '-1':
+                delta = 'B'
             delta_in_control.setdefault(control_node_id, [])
             delta_in_control[control_node_id].append((parameter_node_id, delta))
 
         function_final_delta = {}
         for function_final_delta_output_line in function_final_delta_output:
-            function_node_id, parameter_node_id, delta = function_final_delta_output_line.strip('\n').split(',')
-            if delta == '999':
+            function_node_id, parameter_node_id, delta, delta_type = function_final_delta_output_line.strip('\n').split(',')
+            if delta_type == '1':
                 delta = 'T'
+            elif delta_type == '-1':
+                delta = 'B'
             function_final_delta.setdefault(function_node_id, [])
             function_final_delta[function_node_id].append((parameter_node_id, delta))
 
