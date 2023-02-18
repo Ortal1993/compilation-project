@@ -58,6 +58,9 @@ incomingControlEdges = count : edge(_, controlNodeId, "control", _, _).
 
 .decl controlPath(srcNodeId:number, dstNodeId:number)
 
+controlPath(nodeId, nodeId) :-
+controlVertex(nodeId, _).
+
 controlPath(srcNodeId, dstNodeId) :-
 controlNeighbors(srcNodeId, dstNodeId).
 
@@ -169,69 +172,41 @@ deltaInControlNodeId(controlNodeId, arrayParameterNodeId, delta, maxDeltaType).
 
 .decl deltaInLastControlNodeId(functionNodeId:number, controlNodeId:number, arrayParameterNodeId:number,
                                delta:number, deltaType:number)
+.output deltaInLastControlNodeId(filename="deltaInLastControlNodeId.csv", delimiter=",")
+
 deltaInLastControlNodeId(functionNodeId, controlNodeId, arrayParameterNodeId, delta, deltaType) :-
 startVertex(functionNodeId),
 controlPath(functionNodeId, controlNodeId),
 !edge(controlNodeId, _, "control", _, _),
-deltaInControlNodeId(controlNodeId, arrayParameterNodeId, delta, deltaType).
-
-.decl filteredDeltaInLastControlNodeId(functionNodeId:number, controlNodeId:number, arrayParameterNodeId:number, deltaType:number)
-filteredDeltaInLastControlNodeId(functionNodeId, controlNodeId, arrayParameterNodeId, maxDeltaType) :-
-maxDeltaType = max deltaType : deltaInLastControlNodeId(functionNodeId, controlNodeId, arrayParameterNodeId, _, deltaType).
+filteredDeltaInControlNodeId(controlNodeId, arrayParameterNodeId, delta, deltaType).
 
 .decl functionFinalDelta(functionNodeId:number, arrayParameterNodeId:number, delta:number, deltaType:number)
 .output functionFinalDelta(filename="function_final_delta.csv", delimiter=",")
 
-functionFinalDelta(functionNodeId, arrayParameterNodeId, 0, 1) :-
-minDeltaType = min deltaType : filteredDeltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, deltaType),
-maxDeltaType = max deltaType : filteredDeltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, deltaType),
-minDeltaType = maxDeltaType,
-minDeltaType = 1.
-
+// for cases where every delta is B
 functionFinalDelta(functionNodeId, arrayParameterNodeId, 0, -1) :-
-minDeltaType = min deltaType : filteredDeltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, deltaType),
-maxDeltaType = max deltaType : filteredDeltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, deltaType),
-minDeltaType = maxDeltaType,
-minDeltaType = -1.
+maxDeltaType = max deltaType : deltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, _, deltaType),
+maxDeltaType = -1,
+arrayParameterInFunction(functionNodeId, arrayParameterNodeId).
+
+// for cases where there is at least one T
+functionFinalDelta(functionNodeId, arrayParameterNodeId, 0, 1) :-
+maxDeltaType = max deltaType : deltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, _, deltaType),
+maxDeltaType = 1,
+arrayParameterInFunction(functionNodeId, arrayParameterNodeId).
 
 functionFinalDelta(functionNodeId, arrayParameterNodeId, minDelta, 0) :-
-minDeltaType = min deltaType : filteredDeltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, deltaType),
-maxDeltaType = max deltaType : filteredDeltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, deltaType),
-minDeltaType = maxDeltaType,
-minDeltaType = 0,
-minDelta = min delta : deltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, delta, 0),
-maxDelta = max delta : deltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, delta, 0),
-minDelta = maxDelta.
-
-functionFinalDelta(functionNodeId, arrayParameterNodeId, 0, 1) :-
-minDeltaType = min deltaType : filteredDeltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, deltaType),
-maxDeltaType = max deltaType : filteredDeltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, deltaType),
-minDeltaType = maxDeltaType,
-minDeltaType = 0,
-minDelta = min delta : deltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, delta, 0),
-maxDelta = max delta : deltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, delta, 0),
-minDelta != maxDelta.
-
-functionFinalDelta(functionNodeId, arrayParameterNodeId, 0, 1) :-
-minDeltaType = min deltaType : filteredDeltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, deltaType),
-maxDeltaType = max deltaType : filteredDeltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, deltaType),
-minDeltaType != maxDeltaType,
-maxDeltaType = 1.
-
-functionFinalDelta(functionNodeId, arrayParameterNodeId, minDelta, 0) :-
-minDeltaType = min deltaType : filteredDeltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, deltaType),
-maxDeltaType = max deltaType : filteredDeltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, deltaType),
-minDeltaType != maxDeltaType,
+maxDeltaType = max deltaType : deltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, _, deltaType),
 maxDeltaType = 0,
 minDelta = min delta : deltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, delta, 0),
 maxDelta = max delta : deltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, delta, 0),
-minDelta = maxDelta.
+minDelta = maxDelta,
+arrayParameterInFunction(functionNodeId, arrayParameterNodeId).
 
 functionFinalDelta(functionNodeId, arrayParameterNodeId, 0, 1) :-
-minDeltaType = min deltaType : filteredDeltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, deltaType),
-maxDeltaType = max deltaType : filteredDeltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, deltaType),
-minDeltaType != maxDeltaType,
+maxDeltaType = max deltaType : deltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, _, deltaType),
 maxDeltaType = 0,
 minDelta = min delta : deltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, delta, 0),
 maxDelta = max delta : deltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, delta, 0),
-minDelta != maxDelta.
+minDelta != maxDelta,
+arrayParameterInFunction(functionNodeId, arrayParameterNodeId).
