@@ -110,12 +110,6 @@ deltaInControlNodeId(previousControlNodeId, arrayParameterNodeId, previousDelta,
 // B : bottom, T: top, O: other
 // for example, T O means the trueDeltaType is top and the falseDeltaType is other
 
-// B B
-deltaInControlNodeId(controlNodeId, arrayParameterNodeId, 0, -1) :-
-deltasInMergeBranches(controlNodeId, arrayParameterNodeId, _, _, trueDeltaType, falseDeltaType),
-trueDeltaType = falseDeltaType,
-trueDeltaType = -1.
-
 // T B
 // T O
 // T T
@@ -124,9 +118,11 @@ deltasInMergeBranches(controlNodeId, arrayParameterNodeId, _, _, trueDeltaType, 
 trueDeltaType = 1.
 
 // B O
+// B B
 deltaInControlNodeId(controlNodeId, arrayParameterNodeId, falseDelta, falseDeltaType) :-
 deltasInMergeBranches(controlNodeId, arrayParameterNodeId, _, falseDelta, trueDeltaType, falseDeltaType),
-trueDeltaType = -1.
+trueDeltaType = -1,
+falseDeltaType != 1.
 
 // O O (not-identical deltas)
 deltaInControlNodeId(controlNodeId, arrayParameterNodeId, 0, 1) :-
@@ -147,11 +143,11 @@ trueDelta = falseDelta.
                             firstDeltaType:number, secondDeltaType:number)
 
 // to track cases where there is only one incoming edge into a merge vertex
-deltasInMergeBranches(mergeNodeId, arrayParameterNodeId, delta, delta, previousDeltaType, previousDeltaType) :-
+deltasInMergeBranches(mergeNodeId, arrayParameterNodeId, delta, delta, deltaType, deltaType) :-
 mergeVertex(mergeNodeId),
 incomingControlEdgesToVertex(mergeNodeId, 1),
 controlNeighbors(previousNodeId, mergeNodeId),
-deltaInControlNodeId(previousNodeId, arrayParameterNodeId, delta, previousDeltaType).
+deltaInControlNodeId(previousNodeId, arrayParameterNodeId, delta, deltaType).
 
 // to track cases where there are two incoming edges into a merge vertex
 deltasInMergeBranches(mergeNodeId, arrayParameterNodeId, firstDelta, secondDelta, firstDeltaType, secondDeltaType) :-
