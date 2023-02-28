@@ -15,12 +15,14 @@ dataVertex(nodeId, label) :- vertex(nodeId, "data", label).
 .decl loadVertex(nodeId:number)
 .decl callVertex(nodeId:number)
 .decl mergeVertex(nodeId:number)
+.decl whileVertex(nodeId:number)
 
 startVertex(nodeId) :- controlVertex(nodeId, label), match("[0-9]+ \\x7c start (.*)", label).
 paramVertex(nodeId) :- dataVertex(nodeId, label), match("[0-9]+ \\x7c param (.*)", label).
 loadVertex(nodeId) :- controlVertex(nodeId, label), match("[0-9]+ \\x7c load", label).
 callVertex(nodeId) :- controlVertex(nodeId, label), match("[0-9]+ \\x7c call", label).
 mergeVertex(nodeId) :- controlVertex(nodeId, label), match("[0-9]+ \\x7c merge", label).
+whileVertex(nodeId) :- controlVertex(nodeId, label), match("[0-9]+ \\x7c while", label).
 
 // TODO: need to add type checking for parameters so only array params would exist in this relation
 .decl arrayParameterInFunction(functionNodeId:number, arrayParameterNodeId:number)
@@ -73,11 +75,18 @@ controlPath(otherNodeId, dstNodeId).
 //  1 : Top
 .decl deltaInControlNodeId(controlNodeId:number, arrayParameterNodeId:number, delta:number, deltaType: number)
 
-// initialize every control node id to Bottom
+// initialize every control node id to Bottom which is the last control vertex inside a while loop
 deltaInControlNodeId(controlNodeId, arrayParameterNodeId, 0, -1) :-
 controlVertex(controlNodeId, _),
 arrayParameterInFunction(functionNodeId, arrayParameterNodeId),
-controlPath(functionNodeId, controlNodeId).
+controlPath(functionNodeId, controlNodeId),
+mergeVertex(mergeNodeId),
+whileVertex(whileNodeId),
+edge(whileNodeId, mergeNodeId, "association", "association", "association"),
+controlNeighbors(firstMergeParentNodeId, mergeNodeId),
+controlNeighbors(secondMergeParentNodeId, mergeNodeId),
+firstMergeParentNodeId > secondMergeParentNodeId,
+controlNodeId = firstMergeParentNodeId.
 
 // the delta is 0 for each parameter at the start vertex
 deltaInControlNodeId(functionNodeId, arrayParameterNodeId, 0, 0) :- 
@@ -175,6 +184,9 @@ startVertex(functionNodeId),
 controlPath(functionNodeId, controlNodeId),
 !edge(controlNodeId, _, "control", _, _),
 filteredDeltaInControlNodeId(controlNodeId, arrayParameterNodeId, delta, deltaType).
+
+// TODO: add another deltaInLastControlNodeId rule for while vertices without out-going 'false control' edge.
+// TODO: it can happen when a while loop is the last block inside the current function.
 
 .decl functionFinalDelta(functionNodeId:number, arrayParameterNodeId:number, delta:number, deltaType:number)
 .output functionFinalDelta(filename="function_final_delta.csv", delimiter=",")
