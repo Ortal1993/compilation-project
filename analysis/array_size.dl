@@ -185,8 +185,14 @@ controlPath(functionNodeId, controlNodeId),
 !edge(controlNodeId, _, "control", _, _),
 filteredDeltaInControlNodeId(controlNodeId, arrayParameterNodeId, delta, deltaType).
 
-// TODO: add another deltaInLastControlNodeId rule for while vertices without out-going 'false control' edge.
-// TODO: it can happen when a while loop is the last block inside the current function.
+// rule for while vertices without out-going 'false control' edge.
+// it can happen when a while loop is the last block inside the current function.
+deltaInLastControlNodeId(functionNodeId, controlNodeId, arrayParameterNodeId, delta, deltaType) :-
+startVertex(functionNodeId),
+controlPath(functionNodeId, controlNodeId),
+whileVertex(controlNodeId),
+!edge(controlNodeId, _, "control", "false-control", _),
+filteredDeltaInControlNodeId(controlNodeId, arrayParameterNodeId, delta, deltaType).
 
 .decl functionFinalDelta(functionNodeId:number, arrayParameterNodeId:number, delta:number, deltaType:number)
 .output functionFinalDelta(filename="function_final_delta.csv", delimiter=",")
