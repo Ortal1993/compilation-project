@@ -177,7 +177,6 @@ deltaInControlNodeId(controlNodeId, arrayParameterNodeId, delta, maxDeltaType).
 
 .decl deltaInLastControlNodeId(functionNodeId:number, controlNodeId:number, arrayParameterNodeId:number,
                                delta:number, deltaType:number)
-.output deltaInLastControlNodeId(filename="deltaInLastControlNodeId.csv", delimiter=",")
 
 deltaInLastControlNodeId(functionNodeId, controlNodeId, arrayParameterNodeId, delta, deltaType) :-
 startVertex(functionNodeId),
