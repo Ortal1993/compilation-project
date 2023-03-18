@@ -8,23 +8,26 @@ import subprocess
 import sys
 import re
 import difflib
+import re
 
 
 def parse_args():
     ap = argparse.ArgumentParser()
 
-    ap.add_argument('-n', '--no-build', dest='build', action='store_false', default=True,
-                    help='Skip build stage')
-    ap.add_argument('-s', '--sample', dest='samples', nargs='+',
-                    help='Run the analyzer on sample with index <SAMPLE> (default: do not run anything)')
-    ap.add_argument('-i', '--input', dest='inputs', nargs='+',
-                    help='Run the analyzer on input file named <INPUT> (default: do not run anything)')
-    ap.add_argument('-o', '--output', dest='output', default='graph.txt',
-                    help='Save the graph inside file named <OUTPUT> (default: graph.txt)')
+    ap.add_argument('-n', '--no-build', dest='build_project', action='store_false', default=True,
+                    help='Skip build project stage')
+    ap.add_argument('-s', '--sample', dest='samples', nargs='+', metavar='SAMPLE',
+                    help='Build the graph for the sample with index <SAMPLE> (default: do not build the graph)')
+    ap.add_argument('-i', '--input', dest='inputs', nargs='+', metavar='INPUT',
+                    help='Build the graph for the input file named <INPUT> (default: do not build the graph)')
+    ap.add_argument('-g', '--graph-output', dest='graph_name', default='graph.txt', metavar='GRAPH_NAME',
+                    help='Save the graph inside file named <GRAPH_NAME> (default: graph.txt)')
+    ap.add_argument('-a', '--analyze', dest='analysis_type', choices=list(Analyzer.get_analysis_types().keys()),
+                    help='Run analysis on the graph')
     ap.add_argument('-v', '--verbose', dest='verbose', action='store_true', default=False,
                     help='Print logs and output results')
     ap.add_argument('-c', '--clean', dest='clean', action='store_true', default=False,
-                    help='Before building, remove build and output directories')
+                    help='Before building the project, remove the build and output directories')
     ap.add_argument('-t', '--test', dest='test', action='store_true', default=False,
                     help=argparse.SUPPRESS)
     ap.add_argument('-u', '--update-goldens', dest='update_goldens', action='store_true', default=False,
@@ -79,6 +82,7 @@ class Paths:
         self.build_dir = os.path.join(self.root_dir, 'build')
         self.output_dir = os.path.join(self.root_dir, 'output')
         self.sources_dir = os.path.join(self.root_dir, 'sources')
+        self.analysis_dir = os.path.join(self.root_dir, 'analysis')
         self.tests_dir = os.path.join(self.root_dir, 'tests')
         self.samples_dir = os.path.join(self.tests_dir, 'samples')
         self.goldens_dir = os.path.join(self.tests_dir, 'goldens')
@@ -86,16 +90,108 @@ class Paths:
 
 class Config:
     def __init__(self, args):
-        self.build = args.build
+        self.build_project = args.build_project
         self.samples = args.samples
         self.inputs = args.inputs
-        self.output = args.output
+        self.graph_name = args.graph_name
+        self.analysis_type = args.analysis_type
         self.verbose = args.verbose
         self.clean = args.clean
         self.test = args.test
         self.update_goldens = args.update_goldens
         self.paths = Paths()
 
+class Analyzer:
+    def __init__(self, cfg, log):
+        self.cfg = cfg
+        self.log = log
+
+    def run(self):
+        analysis_types = Analyzer.get_analysis_types()
+        analysis_types[self.cfg.analysis_type](self)
+
+    @classmethod
+    def get_analysis_types(cls):
+        return {
+            'array_size': cls._run_array_size_analysis
+        }
+
+    def _run_array_size_analysis(self):
+        analysis_file = os.path.join(self.cfg.paths.analysis_dir, 'array_size.dl')
+        analysis_cmd = [
+            'souffle',
+            '-F', self.cfg.paths.output_dir,
+            '-D', self.cfg.paths.output_dir,
+            analysis_file
+        ]
+
+        if self.cfg.verbose:
+            self.log.command('Running analyzer', ' '.join(analysis_cmd))
+
+        try:
+            subprocess.run(analysis_cmd, check=True)
+        except subprocess.CalledProcessError as e:
+            self.log.error('Analyzer failed', e.returncode)
+        else:
+            if self.cfg.verbose:
+                self.log.info('Analyzer finished successfully', format=[Format.GREEN])
+
+        self._parse_array_size_analysis_output()
+
+    def _parse_array_size_analysis_output(self):
+        delta_in_control_output_path = os.path.join(self.cfg.paths.output_dir, 'delta_in_control.csv')
+        function_final_delta_output_path = os.path.join(self.cfg.paths.output_dir, 'function_final_delta.csv')
+        graph_path = os.path.join(self.cfg.paths.output_dir, self.cfg.graph_name)
+
+        with open(delta_in_control_output_path, 'r') as delta_in_control_output_file:
+            delta_in_control_output = delta_in_control_output_file.readlines()
+
+        with open(function_final_delta_output_path, 'r') as function_final_delta_output_file:
+            function_final_delta_output = function_final_delta_output_file.readlines()
+
+        with open(graph_path, 'r') as graph_file:
+            graph = graph_file.readlines()
+
+        delta_in_control = {}
+        for delta_in_control_output_line in delta_in_control_output:
+            control_node_id, parameter_node_id, delta, delta_type = delta_in_control_output_line.strip('\n').split(',')
+            if delta_type == '1':
+                delta = 'T'
+            elif delta_type == '-1':
+                delta = 'B'
+            delta_in_control.setdefault(control_node_id, [])
+            delta_in_control[control_node_id].append((parameter_node_id, delta))
+
+        function_final_delta = {}
+        for function_final_delta_output_line in function_final_delta_output:
+            function_node_id, parameter_node_id, delta, delta_type = function_final_delta_output_line.strip('\n').split(',')
+            if delta_type == '1':
+                delta = 'T'
+            elif delta_type == '-1':
+                delta = 'B'
+            function_final_delta.setdefault(function_node_id, [])
+            function_final_delta[function_node_id].append((parameter_node_id, delta))
+
+        for control_node_id, params in delta_in_control.items():
+            append_to_label = ''
+            for param, delta in params:
+                append_to_label += f'\np({param}):d({delta})'
+            if control_node_id in function_final_delta:
+                append_to_label += '\n--------\nfinal delta'
+                for param, delta in function_final_delta[control_node_id]:
+                    append_to_label += f'\np({param}):d({delta})'
+
+            for index, graph_line in enumerate(graph):
+                pattern = r'\s*(\d+) \[ label="(.+)" shape=".+" \]'
+                match = re.match(pattern, graph_line)
+                if match is not None and match[1] == control_node_id:
+                    current_label = match[2]
+                    new_label = current_label + append_to_label
+                    graph[index] = graph_line.replace(current_label, new_label)
+                    break
+
+        with open(graph_path, 'w') as graph_file:
+            graph_file.writelines(graph)
 
 class Stages:
     def __init__(self, args):
@@ -103,41 +199,42 @@ class Stages:
         self.log = Log()
 
     def clean(self):
-        if self.cfg.clean:
-            dirs = [
-                (self.cfg.paths.output_dir, 'output'),
-                (self.cfg.paths.build_dir, 'build')
-            ]
-            for dir_path, dir_name in dirs:
-                if self.cfg.verbose:
-                    self.log.info(f'Removing {dir_name} directory')
-                if os.path.isdir(dir_path):
-                    try:
-                        shutil.rmtree(dir_path)
-                    except shutil.Error as e:
-                        self.log.error(f'Failed to remove existing {dir_name} directory', e.errno)
+        if not self.cfg.clean:
+            return
 
-
-    def build(self):
-        if not self.cfg.build and not self.cfg.test:
+        dirs = [
+            (self.cfg.paths.output_dir, 'output'),
+            (self.cfg.paths.build_dir, 'build')
+        ]
+        for dir_path, dir_name in dirs:
             if self.cfg.verbose:
-                self.log.info('Skipping build stage')
+                self.log.info(f'Removing {dir_name} directory')
+            if os.path.isdir(dir_path):
+                try:
+                    shutil.rmtree(dir_path)
+                except shutil.Error as e:
+                    self.log.error(f'Failed to remove existing {dir_name} directory', e.errno)
+
+    def build_project(self):
+        if not self.cfg.build_project and not self.cfg.test:
+            if self.cfg.verbose:
+                self.log.info('Skipping build project stage')
             return
 
         build_cmd = 'tsc'
 
         if self.cfg.verbose:
-            self.log.command('Running build command', build_cmd)
+            self.log.command('Running build project command', build_cmd)
 
         try:
             subprocess.run(build_cmd, check=True)
         except subprocess.CalledProcessError as e:
-            self.log.error('Build failed', e.returncode)
+            self.log.error('Build project failed', e.returncode)
         else:
             if self.cfg.verbose:
-                self.log.info('Build finished successfully', format=[Format.GREEN])
+                self.log.info('Build project finished successfully', format=[Format.GREEN])
 
-    def run(self):
+    def build_graph(self):
         if self.cfg.test:
             self._test()
             return
@@ -156,16 +253,30 @@ class Stages:
         run_cmd = self._get_run_command([input_file for _, input_file in input_files])
 
         if self.cfg.verbose:
-            self.log.command('Running analyzer', ' '.join(run_cmd))
+            self.log.command('Building graph', ' '.join(run_cmd))
 
         try:
             subprocess.run(run_cmd, check=True)
         except subprocess.CalledProcessError as e:
-            self.log.error('Analyzer failed', e.returncode)
+            self.log.error('Building graph failed', e.returncode)
         else:
             if self.cfg.verbose:
-                self.log.info('Analyzer finished successfully', format=[Format.GREEN])
-                self.log.info(f'Output path: {os.path.join(self.cfg.paths.output_dir, self.cfg.output)}', format=[Format.BOLD])
+                self.log.info('The graph was built successfully', format=[Format.GREEN])
+
+    def analyze(self):
+        if self.cfg.analysis_type is None:
+            return
+
+        analyzer = Analyzer(self.cfg, self.log)
+        analyzer.run()
+
+    def finish(self):
+        if self.cfg.test:
+            return
+        if os.path.isdir(self.cfg.paths.output_dir):
+            self.log.info(f'Output files path: {self.cfg.paths.output_dir}', format=[Format.BOLD], prefix=False)
+        else:
+            self.log.info(f'No output files were generated', format=[Format.BOLD], prefix=False)
 
     def _test(self):
         any_failed = False
@@ -188,7 +299,7 @@ class Stages:
         PASSED, FAILED, UPDATED, UNTOUCHED = 'PASSED', 'FAILED', 'UPDATED', 'UNTOUCHED'
         failed = False
         updated = False
-        self.cfg.output = f'graph_{index}.txt'
+        self.cfg.graph_name = f'graph_{index}.txt'
         run_cmd = self._get_run_command([sample])
 
         if self.cfg.verbose:
@@ -204,7 +315,7 @@ class Stages:
                 failed = self._is_diff(index)
 
         if not failed:
-            os.remove(os.path.join(self.cfg.paths.output_dir, self.cfg.output))
+            os.remove(os.path.join(self.cfg.paths.output_dir, self.cfg.graph_name))
 
         if self.cfg.verbose:
             if failed:
@@ -237,7 +348,7 @@ class Stages:
         self.log.info(f'Result: {result}', prefix=False, format=format)
 
     def _update_golden(self, index):
-        output = os.path.join(self.cfg.paths.output_dir, self.cfg.output)
+        output = os.path.join(self.cfg.paths.output_dir, self.cfg.graph_name)
         golden = os.path.join(self.cfg.paths.goldens_dir, f'graph_{index}.txt')
 
         if self._is_diff(index):
@@ -249,7 +360,7 @@ class Stages:
         return False
 
     def _is_diff(self, index):
-        output = os.path.join(self.cfg.paths.output_dir, self.cfg.output)
+        output = os.path.join(self.cfg.paths.output_dir, self.cfg.graph_name)
         golden = os.path.join(self.cfg.paths.goldens_dir, f'graph_{index}.txt')
 
         with open(output, 'r') as output_file:
@@ -267,7 +378,7 @@ class Stages:
     def _get_run_command(self, input_files):    
         node = 'node'
         entry_point_file = os.path.join(self.cfg.paths.build_dir, 'main.js')
-        output_file = os.path.join(self.cfg.paths.output_dir, self.cfg.output)
+        output_file = os.path.join(self.cfg.paths.output_dir, self.cfg.graph_name)
         return [node, entry_point_file, output_file] + input_files
 
     def _collect_sources(self):
@@ -335,8 +446,10 @@ def main():
     args = parse_args()
     stages = Stages(args)
     stages.clean()
-    stages.build()
-    stages.run()
+    stages.build_project()
+    stages.build_graph()
+    stages.analyze()
+    stages.finish()
 
 
 if __name__ == '__main__':

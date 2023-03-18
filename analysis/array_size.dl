@@ -1,0 +1,225 @@
+.decl edge(srcId:number, dstId:number, kind:symbol, label:symbol, type:symbol)
+.input edge(filename="edges.facts", delimiter=",")
+
+.decl vertex(nodeId:number, type:symbol, label:symbol)
+.input vertex(filename="vertices.facts", delimiter=",")
+
+.decl controlVertex(nodeId:number, label:symbol)
+.decl dataVertex(nodeId:number, label:symbol)
+
+controlVertex(nodeId, label) :- vertex(nodeId, "control", label).
+dataVertex(nodeId, label) :- vertex(nodeId, "data", label).
+
+.decl startVertex(nodeId:number)
+.decl paramVertex(nodeId:number)
+.decl loadVertex(nodeId:number)
+.decl callVertex(nodeId:number)
+.decl mergeVertex(nodeId:number)
+.decl whileVertex(nodeId:number)
+
+startVertex(nodeId) :- controlVertex(nodeId, label), match("[0-9]+ \\x7c start (.*)", label).
+paramVertex(nodeId) :- dataVertex(nodeId, label), match("[0-9]+ \\x7c param (.*)", label).
+loadVertex(nodeId) :- controlVertex(nodeId, label), match("[0-9]+ \\x7c load", label).
+callVertex(nodeId) :- controlVertex(nodeId, label), match("[0-9]+ \\x7c call", label).
+mergeVertex(nodeId) :- controlVertex(nodeId, label), match("[0-9]+ \\x7c merge", label).
+whileVertex(nodeId) :- controlVertex(nodeId, label), match("[0-9]+ \\x7c while", label).
+
+// TODO: need to add type checking for parameters so only array params would exist in this relation
+.decl arrayParameterInFunction(functionNodeId:number, arrayParameterNodeId:number)
+arrayParameterInFunction(functionNodeId, arrayParameterNodeId) :-
+startVertex(functionNodeId), paramVertex(arrayParameterNodeId),
+edge(arrayParameterNodeId, functionNodeId, "association", _, _).
+
+.decl controlNeighbors(srcNodeId:number, dstNodeId:number)
+controlNeighbors(srcNodeId, dstNodeId) :- edge(srcNodeId, dstNodeId, "control", _, _).
+
+.decl arrayMethods(name:symbol, delta:number)
+arrayMethods("push", 1).
+arrayMethods("pop", -1).
+arrayMethods("unshift", 1).
+arrayMethods("shift", -1).
+
+.decl arrayMethodCalling(arrayParameterNodeId:number,
+                         callControlNodeId:number, 
+                         delta:number)
+arrayMethodCalling(arrayParameterNodeId, callControlNodeId, delta) :-
+paramVertex(arrayParameterNodeId),
+loadVertex(loadControl),
+callVertex(callControlNodeId),
+vertex(propertyNodeId, "data", propertyLable),
+edge(arrayParameterNodeId, loadControl, "data", "object", _),
+edge(propertyNodeId, loadControl, "data", "property", _),
+edge(loadControl, callControlNodeId, "data", "callable", _),
+arrayMethods(methodName, delta),
+match(cat("[0-9]+ \\x7c #", methodName), propertyLable).
+
+.decl incomingControlEdgesToVertex(controlNodeId:number, incomingControlEdges:number)
+incomingControlEdgesToVertex(controlNodeId, incomingControlEdges) :-
+controlVertex(controlNodeId, _),
+incomingControlEdges = count : edge(_, controlNodeId, "control", _, _).
+
+.decl controlPath(srcNodeId:number, dstNodeId:number)
+
+controlPath(nodeId, nodeId) :-
+controlVertex(nodeId, _).
+
+controlPath(srcNodeId, dstNodeId) :-
+controlNeighbors(srcNodeId, dstNodeId).
+
+controlPath(srcNodeId, dstNodeId) :-
+controlPath(srcNodeId, otherNodeId),
+controlPath(otherNodeId, dstNodeId).
+
+// -1 : Bottom
+//  0 : Other
+//  1 : Top
+.decl deltaInControlNodeId(controlNodeId:number, arrayParameterNodeId:number, delta:number, deltaType: number)
+
+// initialize every control node id to Bottom which is the last control vertex inside a while loop
+deltaInControlNodeId(controlNodeId, arrayParameterNodeId, 0, -1) :-
+controlVertex(controlNodeId, _),
+arrayParameterInFunction(functionNodeId, arrayParameterNodeId),
+controlPath(functionNodeId, controlNodeId),
+mergeVertex(mergeNodeId),
+whileVertex(whileNodeId),
+edge(whileNodeId, mergeNodeId, "association", "association", "association"),
+controlNeighbors(firstMergeParentNodeId, mergeNodeId),
+controlNeighbors(secondMergeParentNodeId, mergeNodeId),
+firstMergeParentNodeId > secondMergeParentNodeId,
+controlNodeId = firstMergeParentNodeId.
+
+// the delta is 0 for each parameter at the start vertex
+deltaInControlNodeId(functionNodeId, arrayParameterNodeId, 0, 0) :- 
+arrayParameterInFunction(functionNodeId, arrayParameterNodeId).
+
+// if controlNodeId is a call vertex of one of the array methods and the previous delta is a number
+deltaInControlNodeId(controlNodeId, arrayParameterNodeId, delta, 0) :-
+controlNeighbors(previousControlNodeId, controlNodeId),
+deltaInControlNodeId(previousControlNodeId, arrayParameterNodeId, previousDelta, previousDeltaType),
+previousDeltaType = 0,
+arrayMethodCalling(arrayParameterNodeId, controlNodeId, currDelta),
+delta = previousDelta + currDelta.
+
+// if controlNodeId is a call vertex of one of the array methods and the previous delta is B/T
+deltaInControlNodeId(controlNodeId, arrayParameterNodeId, 0, previousDeltaType) :-
+controlNeighbors(previousControlNodeId, controlNodeId),
+deltaInControlNodeId(previousControlNodeId, arrayParameterNodeId, _, previousDeltaType),
+previousDeltaType != 0,
+arrayMethodCalling(arrayParameterNodeId, controlNodeId, _).
+
+// a regular control vertex (not a merge vertex) which does nothing
+deltaInControlNodeId(controlNodeId, arrayParameterNodeId, previousDelta, previusDeltaType) :-
+!mergeVertex(controlNodeId),
+controlNeighbors(previousControlNodeId, controlNodeId),
+deltaInControlNodeId(previousControlNodeId, arrayParameterNodeId, previousDelta, previusDeltaType),
+!arrayMethodCalling(arrayParameterNodeId, controlNodeId, _).
+
+// the following cases determine the delta in merge vertices
+// we split the cases by the values of deltaType
+// B : bottom, T: top, O: other
+// for example, T O means the trueDeltaType is top and the falseDeltaType is other
+
+// T B
+// T O
+// T T
+deltaInControlNodeId(controlNodeId, arrayParameterNodeId, 0, 1) :-
+deltasInMergeBranches(controlNodeId, arrayParameterNodeId, _, _, trueDeltaType, _),
+trueDeltaType = 1.
+
+// B O
+// B B
+deltaInControlNodeId(controlNodeId, arrayParameterNodeId, falseDelta, falseDeltaType) :-
+deltasInMergeBranches(controlNodeId, arrayParameterNodeId, _, falseDelta, trueDeltaType, falseDeltaType),
+trueDeltaType = -1,
+falseDeltaType != 1.
+
+// O O (not-identical deltas)
+deltaInControlNodeId(controlNodeId, arrayParameterNodeId, 0, 1) :-
+deltasInMergeBranches(controlNodeId, arrayParameterNodeId, trueDelta, falseDelta, trueDeltaType, falseDeltaType),
+trueDeltaType = falseDeltaType,
+trueDeltaType = 0,
+trueDelta != falseDelta.
+
+// O O (identical deltas)
+deltaInControlNodeId(controlNodeId, arrayParameterNodeId, trueDelta, 0) :-
+deltasInMergeBranches(controlNodeId, arrayParameterNodeId, trueDelta, falseDelta, trueDeltaType, falseDeltaType),
+trueDeltaType = falseDeltaType,
+trueDeltaType = 0,
+trueDelta = falseDelta.
+
+.decl deltasInMergeBranches(mergeNodeId:number, arrayParameterNodeId:number,
+                            firstDelta:number, secondDelta:number,
+                            firstDeltaType:number, secondDeltaType:number)
+
+// to track cases where there is only one incoming edge into a merge vertex
+deltasInMergeBranches(mergeNodeId, arrayParameterNodeId, delta, delta, deltaType, deltaType) :-
+mergeVertex(mergeNodeId),
+incomingControlEdgesToVertex(mergeNodeId, 1),
+controlNeighbors(previousNodeId, mergeNodeId),
+deltaInControlNodeId(previousNodeId, arrayParameterNodeId, delta, deltaType).
+
+// to track cases where there are two incoming edges into a merge vertex
+deltasInMergeBranches(mergeNodeId, arrayParameterNodeId, firstDelta, secondDelta, firstDeltaType, secondDeltaType) :-
+mergeVertex(mergeNodeId),
+incomingControlEdgesToVertex(mergeNodeId, 2),
+controlNeighbors(firstNodeId, mergeNodeId),
+controlNeighbors(secondNodeId, mergeNodeId),
+firstNodeId != secondNodeId,
+deltaInControlNodeId(firstNodeId, arrayParameterNodeId, firstDelta, firstDeltaType),
+deltaInControlNodeId(secondNodeId, arrayParameterNodeId, secondDelta, secondDeltaType).
+
+.decl filteredDeltaInControlNodeId(controlNodeId:number, arrayParameterNodeId:number, delta:number, deltaType: number)
+.output filteredDeltaInControlNodeId(filename="delta_in_control.csv", delimiter=",")
+
+filteredDeltaInControlNodeId(controlNodeId, arrayParameterNodeId, delta, maxDeltaType) :-
+maxDeltaType = max deltaType : deltaInControlNodeId(controlNodeId, arrayParameterNodeId, _, deltaType),
+deltaInControlNodeId(controlNodeId, arrayParameterNodeId, delta, maxDeltaType).
+
+.decl deltaInLastControlNodeId(functionNodeId:number, controlNodeId:number, arrayParameterNodeId:number,
+                               delta:number, deltaType:number)
+
+deltaInLastControlNodeId(functionNodeId, controlNodeId, arrayParameterNodeId, delta, deltaType) :-
+startVertex(functionNodeId),
+controlPath(functionNodeId, controlNodeId),
+!edge(controlNodeId, _, "control", _, _),
+filteredDeltaInControlNodeId(controlNodeId, arrayParameterNodeId, delta, deltaType).
+
+// rule for while vertices without out-going 'false control' edge.
+// it can happen when a while loop is the last block inside the current function.
+deltaInLastControlNodeId(functionNodeId, controlNodeId, arrayParameterNodeId, delta, deltaType) :-
+startVertex(functionNodeId),
+controlPath(functionNodeId, controlNodeId),
+whileVertex(controlNodeId),
+!edge(controlNodeId, _, "control", "false-control", _),
+filteredDeltaInControlNodeId(controlNodeId, arrayParameterNodeId, delta, deltaType).
+
+.decl functionFinalDelta(functionNodeId:number, arrayParameterNodeId:number, delta:number, deltaType:number)
+.output functionFinalDelta(filename="function_final_delta.csv", delimiter=",")
+
+// for cases where every delta is B
+functionFinalDelta(functionNodeId, arrayParameterNodeId, 0, -1) :-
+maxDeltaType = max deltaType : deltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, _, deltaType),
+maxDeltaType = -1,
+arrayParameterInFunction(functionNodeId, arrayParameterNodeId).
+
+// for cases where there is at least one T
+functionFinalDelta(functionNodeId, arrayParameterNodeId, 0, 1) :-
+maxDeltaType = max deltaType : deltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, _, deltaType),
+maxDeltaType = 1,
+arrayParameterInFunction(functionNodeId, arrayParameterNodeId).
+
+functionFinalDelta(functionNodeId, arrayParameterNodeId, minDelta, 0) :-
+maxDeltaType = max deltaType : deltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, _, deltaType),
+maxDeltaType = 0,
+minDelta = min delta : deltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, delta, 0),
+maxDelta = max delta : deltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, delta, 0),
+minDelta = maxDelta,
+arrayParameterInFunction(functionNodeId, arrayParameterNodeId).
+
+functionFinalDelta(functionNodeId, arrayParameterNodeId, 0, 1) :-
+maxDeltaType = max deltaType : deltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, _, deltaType),
+maxDeltaType = 0,
+minDelta = min delta : deltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, delta, 0),
+maxDelta = max delta : deltaInLastControlNodeId(functionNodeId, _, arrayParameterNodeId, delta, 0),
+minDelta != maxDelta,
+arrayParameterInFunction(functionNodeId, arrayParameterNodeId).

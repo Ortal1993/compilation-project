@@ -3,6 +3,11 @@ import * as vertex from "./vertex";
 
 
 export enum EdgeType {
+    Standard = "standard",
+    Association = "association"
+};
+
+export enum EdgeKind {
     Control = "control",
     Data = "data",
     Association = "association"
@@ -19,8 +24,7 @@ export class Graph {
 
     private static typeToStyle(type: EdgeType, label: string) {
         switch(type) {
-            case EdgeType.Control:
-            case EdgeType.Data:
+            case EdgeType.Standard:
                 return `label="${label}"`;
             case EdgeType.Association:
                 return `label="${label}", style=dashed, dir=none`;
@@ -45,11 +49,11 @@ export class Graph {
         }
     }
 
-    public addEdge(srcId: NodeId, dstId: NodeId, label: string, type: EdgeType): void {
+    public addEdge(srcId: NodeId, dstId: NodeId, kind: EdgeKind, label: string, type: EdgeType = EdgeType.Standard): void {
         this.checkVertexId(srcId);
         this.checkVertexId(dstId);
 
-        let newEdge: Edge = new Edge(srcId, dstId, label, type);
+        let newEdge: Edge = new Edge(srcId, dstId, kind, label, type);
         this.edges.push(newEdge);
     }
 
@@ -158,6 +162,7 @@ export class Edge {
     public constructor(
         public srcId: NodeId,
         public dstId: NodeId,
+        public kind: EdgeKind,
         public label: string,
         public type: EdgeType
     ) {};
