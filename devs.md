@@ -24,6 +24,7 @@ Overall, the running flow is described by the diagram below:
   * Declarations
   * Definitions
   * Assignments
+  * Shadowing
 * Branching
   * If, Else and Else-If statements
   * Loops
@@ -60,7 +61,7 @@ Also, there are two main types of edges: data and control. Data edges connect be
 
 Association edges are a third type of edges which provide semantic 	associations between vertices in the graph. For example, association edges connect functions entry points with their parameters vertices, and merge vertices with branching vertices (like “if” and “while” vertices).
 
-The graph builder maintains symbol table and other data members that **TODO**.
+The graph builder maintains symbol table and other data members, which their purpose is to save and track as much semantic information as possible. Using this data, we can insert the semantic information into the graph (like association edges).
 
 ## Implementation Details
 
@@ -102,6 +103,12 @@ Branching of ‘while’ statements is implemented as follows:
 5.	The symbol table must be retrieved from the saved snapshot, because there still might be negative values (indicating of variables which were not reassigned during the ‘while’ block).
 6.	Phi vertices are created using the mapping we defined while comparing the symbol tables, and the symbol table is updated accordingly.
 7.	Back patching: for each edge with negative source node ID, change the source node ID to be the current node ID of the corresponding variable (using the symbol table). This node ID might be an ID of a phi vertex but it also might be the ID of the original variable node.
+
+### Functions Declaration and Definition Processing
+
+In Typescript it is possible to call a function before it was even declared. In order to deal with it, we first went through all the statements in the current block and processed only function signatures by creating a symbol vertex (which represents the function) in the graph for each function and saving their names (and the ID of the their symbol vertex) in the symbol table. After processing the block again, every function call can be resolved using the corresponding entry in the symbol table.
+
+Also, in TypeScript it is possible that a function definition uses variables that are declared after the function definition. In order to deal with it, we process function blocks (the definition itself) only after processing the block at which the function is defined.
 
 # 4. Analyzer
 
