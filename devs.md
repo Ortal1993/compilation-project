@@ -112,4 +112,35 @@ Also, in TypeScript it is possible that a function definition uses variables tha
 
 # 4. Analyzer
 
-**TODO**
+In general, classic analysis are done by deducing properties of vertices using the properties of their parents vertices. That is, we can define rules which determine the properties of nodes by examining the properties of their parents. A logic language fits this pattern, and this is why we analyze the graph using souffle, which is a logic programming language, and is based on the Datalog language. Souffle also provides an engine to run the analysis on the defined rules.
+
+We implemented three types of analysis as a 'proof of concept':
+
+## 1. Dead Code Analysis
+
+The analysis marks every control/data vertex which is unreachable. For example, a function call which appears after return statement would result in unreachable call vertex, or an expression which its value is never used.
+
+**Note:** This analysis is very basic and doesn't cover all the possible cases. For example, let's consider the following code:
+
+```
+while (<cond>) {
+    ...
+}
+func()
+```
+
+If <cond> is a simple boolean value like 'true', the analysis should mark the func() call as unreachable. But if <cond> is a function call, then we should first try to analyze the return value of this function, and then determine whether the func() call is reachable.
+
+## 2. "Points To" Analysis
+
+This analysis should track all the different objects and variables that point to the same object.
+ 
+**Note:** We implemented a basic version of the analysis as this type of analysis is pretty complicated.
+
+## 3. "Tracking Array/List Sizes" Analysis
+
+This analysis tracks the changing of array/list size inside functions. The analysis report contains the deltas for each control node, and the final delta for each array parameter is summarized for each function. If a size of an array at some point cannot be determined (for example, it can have more than one value), its delta value is considered to be top (which is marked with 'T').
+
+**Notes:**
+1. As of now, only arrays parameters are tracked (which means local arrays variables are not tracked).
+2. Also, We assume all of the parameters are all arrays. That's because we haven't saved any typing information in the graph itself, and that's why we can't distinguish between types of parameters.
