@@ -2,7 +2,7 @@
 
 TypeScript, which is a syntactic superset of JavaScript, is transpiled to JavaScript using a compiler. The TypeScript compiler performs type checking during compilation, but it makes permissive assumptions about the types of objects in the source code.
 
-To ensure typing correctness during compilation, we want to run analysis over the source code. These analysis would check **TODO**.
+To ensure typing correctness during compilation, we want to run analysis over the source code. These analysis will check various issues in the code and will determine if the code is "safe", regards those issues. For example, one such issue is type conformance.
 
 The whole analysis process consists of two main stages. First, we build a graph representing the source code, using the generated AST of the TypeScript compiler. The graph is an IR of the source code and consists of data and control vertices and edges. Then, we run the analyzer on the graph, using souffle engine.
 
