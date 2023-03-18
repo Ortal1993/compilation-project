@@ -116,7 +116,7 @@ In general, classic analysis are done by deducing properties of vertices using t
 
 We implemented three types of analysis as a 'proof of concept':
 
-## 1. Dead Code Analysis
+## 1. "Dead Code" Analysis
 
 The analysis marks every control/data vertex which is unreachable. For example, a function call which appears after return statement would result in unreachable call vertex, or an expression which its value is never used.
 
@@ -126,7 +126,7 @@ The analysis marks every control/data vertex which is unreachable. For example, 
 while (<cond>) {
     ...
 }
-func()
+func();
 ```
 
 If <cond> is a simple boolean value like 'true', the analysis should mark the func() call as unreachable. But if <cond> is a function call, then we should first try to analyse the return value of this function, and then determine whether the func() call is reachable.
