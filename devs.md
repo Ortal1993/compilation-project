@@ -28,13 +28,13 @@ Overall, the running flow is described by the diagram below:
 * Branching
   * If, Else and Else-If statements
   * Loops
-    * While statements
-    * Break statements*
-    * Continue statements*
+    * While Statements
+    * Break Statements*
+    * Continue Statements*
 * Functions
   * Functions Calling
   * Parameters
-  * Return statements
+  * Return Statements
   * Anonymous Functions
 * Objects
   * Definition
@@ -51,7 +51,7 @@ Overall, the running flow is described by the diagram below:
 **Notes:**
 * Break and continue statements are not fully functional. Their processing methods in the GraphBuilder do not create any phi-edges.
 
-# 3. GraphBuilder Class
+# 3. GraphBuilder
 
 The graph builder uses the generated AST of the TypeScript compiler. It traverses the AST, starting with the root node, and creates the vertices and the edges of the graph according to the type of the traversed node.
 
@@ -112,7 +112,7 @@ Also, in TypeScript it is possible that a function definition uses variables tha
 
 # 4. Analyzer
 
-In general, classic analysis are done by deducing properties of vertices using the properties of their parents vertices. That is, we can define rules which determine the properties of nodes by examining the properties of their parents. A logic language fits this pattern, and this is why we analyze the graph using souffle, which is a logic programming language, and is based on the Datalog language. Souffle also provides an engine to run the analysis on the defined rules.
+In general, classic analysis are done by deducing properties of vertices using the properties of their parents vertices. That is, we can define rules which determine the properties of nodes by examining the properties of their parents. A logic language fits this pattern, and this is why we analyse the graph using souffle, which is a logic programming language, and is based on the Datalog language. Souffle also provides an engine to run the analysis on the defined rules.
 
 We implemented three types of analysis as a 'proof of concept':
 
@@ -129,7 +129,7 @@ while (<cond>) {
 func()
 ```
 
-If <cond> is a simple boolean value like 'true', the analysis should mark the func() call as unreachable. But if <cond> is a function call, then we should first try to analyze the return value of this function, and then determine whether the func() call is reachable.
+If <cond> is a simple boolean value like 'true', the analysis should mark the func() call as unreachable. But if <cond> is a function call, then we should first try to analyse the return value of this function, and then determine whether the func() call is reachable.
 
 ## 2. "Points To" Analysis
 
