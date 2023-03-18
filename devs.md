@@ -66,7 +66,42 @@ The graph builder maintains symbol table and other data members that **TODO**.
 
 ### Branching
 
-**TODO**
+The symbol table is essentially a mapping between variables names and the ID of their corresponding nodes in the graph.
+
+‘if’ and ‘while’ block should not be processed just like any other block, and that’s because at most cases, during compile time, we can’t know if these blocks will get executed during run time (and how many times in case of ‘while’ block).
+
+If a variable was defined before an ‘if’ statement, and was changed during the ‘if’ block, we want to save both values in the graph. For that, we use phi vertices which represent the possible values of a variable after processing the ‘if’ block.
+
+Processing ‘while’ statements is done using backpatching. Let's consider the following code:
+
+```
+let x: number = 0;    // definition
+while (...) {
+    func(x);          // use
+    x = 1;            // reassignment
+}
+```
+
+In this block a variable is defined before a ‘while’ statement, then is used during the ‘while’ block and then reassigned during the ‘while’ block. The used value can be one of both: the value of the variable before executing the block (x = 0) and the value of the variable after reassigning it during the block (x = 1). But when processing the 'use' statement, we can't know which node should represent the value of the variable. That's because we haven't processed yet the reassignment statement, and even don't know if such exists later on in the 'while' block. The solution would be backpatching: if we don’t know which node to use, we create a phi vertex after processing the ‘while’ block and patch the nodes of the ‘use’ statements accordingly.
+
+Branching of ‘if’ statements is implemented as follows:
+
+1.	Before processing any of the branch blocks (that is, the block of the statement), a snapshot of the current symbol table is saved for later use.
+2.	The true-branch block is processed as usual.
+3.	The current symbol table is compared against the symbol table we saved before. If the nodes for any variable differ, that means the value of the variable was changed during the true-branch block. The new node ID is saved in a new mapping, which indicates which variables were changed during the true-branch block. Finally, the symbol table is retrieved from the saved snapshot.
+4.	Now the symbol table looks like the true-branch block was never processed, and we can process the false-branch (if exists) as usual.
+5.	Again, the current symbol table is compared against the symbol table we saved before, and the new node ID of each variable is saved in a new mapping.
+6.	Phi vertices are created using the mappings we defined while comparing the symbol tables. The symbol table is updated using the ID’s of these vertices.
+
+Branching of ‘while’ statements is implemented as follows:
+
+1.	A snapshot of the symbol table is saved.
+2.	We assign a new node ID to each variable in the current symbol table. This ID is a unique negative value. If a variable was used during the ‘while’ block and then was reassigned, we would have an edge with negative source node ID in the graph and the node ID in the symbol table would be a positive number (which is not equal to the original node ID).
+3.	The true-branch block is processed as usual.
+4.	The current symbol table is compared against the symbol table we saved before to check which variables were reassigned during the ‘while’ block.
+5.	The symbol table must be retrieved from the saved snapshot, because there still might be negative values (indicating of variables which were not reassigned during the ‘while’ block).
+6.	Phi vertices are created using the mapping we defined while comparing the symbol tables, and the symbol table is updated accordingly.
+7.	Back patching: for each edge with negative source node ID, change the source node ID to be the current node ID of the corresponding variable (using the symbol table). This node ID might be an ID of a phi vertex but it also might be the ID of the original variable node.
 
 # 4. Analyzer
 
